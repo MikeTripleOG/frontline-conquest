@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d2238">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Frontline Conquest</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div class="stat"><span class="ic">🪖</span><b id="sTroops">0</b><small id="sCap">/0</small></div>
+    <div class="stat"><span class="ic">💰</span><b id="sGold">0</b><small id="sGoldRate"></small></div>
+    <div class="stat"><span class="ic">🌍</span><b id="sLand">0%</b></div>
+    <button id="btnMenu" class="iconbtn" aria-label="Menu">⏸</button>
+  </div>
+  <div id="goal"><div id="goalFill"></div><div id="goalMark"></div><span id="goalTxt">Goal: 80% of the world</span></div>
+  <div id="banner"></div>
+  <div id="lb"><div id="lbHead">🏆 Leaderboard <span id="lbToggle">▾</span></div><ol id="lbList"></ol></div>
+  <div id="toasts"></div>
+  <div id="attacks"></div>
+  <div id="bottom">
+    <div id="modeBar" class="hidden"><span id="modeTxt"></span><button id="modeCancel">Cancel</button></div>
+    <div id="pctRow">
+      <span class="lbl">Send</span>
+      <button class="pct" data-p="10">10%</button><button class="pct" data-p="25">25%</button><button class="pct" data-p="35">35%</button><button class="pct" data-p="50">50%</button><button class="pct" data-p="75">75%</button>
+    </div>
+    <div id="actRow">
+      <button id="btnBuild" class="act">🏗️ Build</button>
+      <button id="btnNuke" class="act">☢️ Nuke</button>
+      <button id="btnHome" class="act">🏠 Home</button>
+      <button id="btnSpeed" class="act">⏩ 1x</button>
+    </div>
+  </div>
+</div>
+
+<!-- panels -->
+<div id="panel" class="sheet hidden"><div class="sheetHead"><b id="panelTitle"></b><button class="close" data-close>✕</button></div><div id="panelBody"></div></div>
+
+<div id="start" class="screen">
+  <div class="card">
+    <h1>Frontline<span>Conquest</span></h1>
+    <p class="tag">Claim the world, one tile at a time.</p>
+    <label>Your nation's name<input id="inName" maxlength="18" placeholder="Your nation" value=""></label>
+    <div class="grp"><div class="gl">Difficulty</div>
+      <div class="seg" id="segDiff"><button data-v="relaxed">Relaxed</button><button data-v="standard" class="on">Standard</button><button data-v="brutal">Brutal</button></div></div>
+    <div class="grp"><div class="gl">Rival nations</div>
+      <div class="seg" id="segNations"><button data-v="30">30</button><button data-v="60">60</button><button data-v="87" class="on">87</button></div></div>
+    <div class="grp"><div class="gl">Tribes</div>
+      <div class="seg" id="segTribes"><button data-v="150">150</button><button data-v="400" class="on">400</button><button data-v="600">600</button></div></div>
+    <button id="btnPlay" class="big">▶ Play</button>
+    <details id="howto"><summary>How to play</summary>
+      <ul>
+        <li><b>Start:</b> tap any unclaimed land on the world map to place your capital. AI nations can't attack you during spawn protection.</li>
+        <li><b>Attack:</b> pick how many troops to send (10–75%), then tap land next to your border: empty land, a tribe, or a nation. Your border pushes forward tile by tile until those troops run out.</li>
+        <li><b>Troops</b> regrow on their own. More land means more troops, up to your troop cap. <b>Gold</b> comes in steadily.</li>
+        <li><b>Build:</b> tap your own land (or press Build). <b>City</b> raises your troop cap, <b>Factory</b> adds gold, <b>Port</b> lets you send boats across the sea (tap land overseas), <b>Defense Post</b> makes nearby land 3× harder to take, <b>Missile Silo</b> unlocks nukes, <b>SAM</b> shoots down nukes.</li>
+        <li><b>Nukes</b> wipe out troops and buildings in a radius and leave fallout. Fallout doesn't count toward the goal, and anyone can reclaim it.</li>
+        <li><b>Alliances:</b> nations may offer you peace. Long-press (or right-click) a nation to see its info or ask for an alliance.</li>
+        <li><b>Win</b> by owning 80% of the world. You lose if your territory is wiped out.</li>
+        <li>Drag to pan, pinch or scroll to zoom.</li>
+      </ul>
+    </details>
+    <p class="foot">Single-player vs AI · plays in your browser</p>
+  </div>
+</div>
+
+<div id="loading" class="screen hidden"><div class="card"><h2>Generating world…</h2></div></div>
+
+<div id="end" class="screen hidden"><div class="card"><h2 id="endTitle"></h2><p id="endText"></p>
+  <button id="btnWatch" class="big ghost">Keep watching</button><button id="btnAgain" class="big">New game</button></div></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

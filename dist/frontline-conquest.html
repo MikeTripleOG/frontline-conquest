@@ -1,0 +1,1458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d2238">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Frontline Conquest</title>
+
+
+<style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0d2238;color:#eef3ff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+canvas#cv{position:fixed;inset:0;touch-action:none;display:block}
+.hidden{display:none!important}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+#hud{position:fixed;inset:0;pointer-events:none}
+#hud>*{pointer-events:auto}
+#topbar{position:absolute;top:calc(6px + env(safe-area-inset-top));left:6px;right:6px;display:flex;gap:6px;align-items:center}
+.stat{background:rgba(8,16,30,.82);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:5px 9px;display:flex;align-items:baseline;gap:4px;font-size:15px;white-space:nowrap}
+.stat b{font-size:16px}.stat small{opacity:.7;font-size:11px}.ic{font-size:14px}
+.iconbtn{margin-left:auto;background:rgba(8,16,30,.82);border:1px solid rgba(255,255,255,.15);border-radius:10px;width:38px;height:34px;font-size:16px}
+#goal{position:absolute;top:calc(46px + env(safe-area-inset-top));left:6px;width:min(330px,calc(100% - 12px));height:14px;background:rgba(8,16,30,.82);border-radius:7px;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+#goalFill{height:100%;width:0;background:linear-gradient(90deg,#2f8cff,#5cf0ff);transition:width .4s}
+#goalMark{position:absolute;left:80%;top:0;bottom:0;width:2px;background:#ffd34d}
+#goalTxt{position:absolute;inset:0;font-size:10px;line-height:13px;text-align:center;text-shadow:0 1px 2px #000;font-weight:600}
+#banner{position:absolute;top:calc(66px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(8,16,30,.85);border:1px solid rgba(255,211,77,.5);color:#ffe9a8;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;max-width:92%;pointer-events:none}
+#banner:empty{display:none}
+#lb{position:absolute;top:calc(46px + env(safe-area-inset-top));right:6px;width:200px;background:rgba(8,16,30,.82);border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:12px;overflow:hidden}
+#lbHead{padding:5px 8px;font-weight:700;display:flex;justify-content:space-between;cursor:pointer}
+#lb.collapsed ol{display:none}
+#lbList{margin:0;padding:0 6px 6px;list-style:none}
+#lbList li{display:flex;align-items:center;gap:5px;padding:2px 2px;border-radius:5px}
+#lbList li.me{background:rgba(255,196,20,.28)}
+#lbList .sw{width:9px;height:9px;border-radius:2px;flex:none}
+#lbList .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lbList .rk{width:16px;opacity:.6;text-align:right}
+#lbList .pc{opacity:.85;font-variant-numeric:tabular-nums}
+#toasts{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));width:min(420px,94%);display:flex;flex-direction:column-reverse;gap:6px;pointer-events:none}
+.toast{background:rgba(8,16,30,.92);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 11px;font-size:13px;animation:tin .25s ease-out;pointer-events:auto}
+.toast.bad{border-color:#e6534a}.toast.good{border-color:#4ad66d}.toast.warn{border-color:#ffd34d}
+.toast .row{display:flex;gap:6px;margin-top:6px}.toast .row button{flex:1;padding:7px;border-radius:8px;background:#2f8cff;font-weight:700}.toast .row button.no{background:#444c5c}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+#attacks{position:absolute;left:6px;bottom:calc(118px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:4px;max-width:70%;pointer-events:none}
+.chip{background:rgba(8,16,30,.85);border-left:4px solid #fff;border-radius:6px;padding:3px 7px;font-size:11px}
+#bottom{position:absolute;left:0;right:0;bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(5,10,20,.85) 30%)}
+#pctRow,#actRow{display:flex;gap:5px;justify-content:center;align-items:center;margin-top:5px}
+#pctRow .lbl{font-size:12px;opacity:.8;margin-right:2px}
+.pct{flex:1;max-width:72px;padding:9px 0;border-radius:9px;background:rgba(40,52,74,.95);font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,.1)}
+.pct.on{background:#2f8cff;border-color:#9cc8ff}
+.act{flex:1;max-width:120px;padding:10px 0;border-radius:10px;background:rgba(40,52,74,.95);font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,.1)}
+.act:active,.pct:active{transform:scale(.96)}
+#modeBar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#7a4b00;border:1px solid #ffd34d;border-radius:10px;padding:6px 6px 6px 12px;font-size:13px;font-weight:600}
+#modeBar button{background:#000a;padding:6px 12px;border-radius:8px}
+.sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(480px,100%);max-height:72%;overflow:auto;background:#111c30;border:1px solid rgba(255,255,255,.15);border-radius:16px 16px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom));z-index:5;box-shadow:0 -8px 30px #0008}
+.sheetHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:16px}
+.close{background:#2a3550;width:32px;height:32px;border-radius:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bcard{background:#1c2a45;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px;text-align:left;display:flex;flex-direction:column;gap:3px}
+.bcard b{font-size:14px}.bcard small{opacity:.75;font-size:11px;line-height:1.3}
+.bcard .cost{color:#ffd34d;font-weight:700;font-size:13px}
+.bcard[disabled]{opacity:.45}
+.bico{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#2f8cff;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-right:6px}
+.info p{margin:4px 0;font-size:14px}.info .btns{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.info .btns button,.menuBtn{padding:11px;border-radius:10px;background:#2f8cff;font-weight:700;font-size:15px;width:100%}
+.info .btns button.alt,.menuBtn.alt{background:#2a3550}
+.info .btns button.danger{background:#a8322b}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at top,#1b3b66,#07101e 70%);z-index:10;overflow:auto;padding:16px}
+#end{background:rgba(4,8,16,.72)}
+.card{width:min(440px,100%);background:rgba(13,24,44,.92);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:20px;box-shadow:0 20px 60px #000a;margin:auto}
+h1{margin:0;font-size:40px;line-height:1;letter-spacing:1px;font-weight:900;text-transform:uppercase;color:#5cb8ff}
+h1 span{display:block;color:#ffd34d;font-size:30px;letter-spacing:6px}
+h2{margin:0 0 10px}
+.tag{opacity:.8;margin:8px 0 16px}
+label{display:block;font-size:13px;opacity:.95}
+input{display:block;width:100%;margin-top:5px;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#0a1426;color:#fff;font-size:16px}
+.grp{margin-top:12px}.gl{font-size:13px;margin-bottom:5px}
+.seg{display:flex;background:#0a1426;border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;padding:9px 0;border-radius:8px;background:transparent;font-weight:600}
+.seg button.on{background:#2f8cff}
+.big{display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;background:linear-gradient(#ffcf3a,#f0a400);color:#1a1200;font-weight:900;font-size:19px}
+.big.ghost{background:#2a3550;color:#fff;font-size:16px}
+details{margin-top:14px;background:#0a1426;border-radius:10px;padding:8px 12px}
+summary{font-weight:700;cursor:pointer}
+details ul{padding-left:18px;margin:8px 0 2px;font-size:13px;line-height:1.45}
+details li{margin-bottom:5px}
+.foot{opacity:.5;font-size:11px;text-align:center;margin:12px 0 0}
+@media (max-width:560px){
+  #lb{width:150px;font-size:11px}
+  .stat{padding:4px 6px;font-size:13px}.stat b{font-size:14px}.stat small{font-size:10px}
+  #goal{width:calc(100% - 168px)}
+}
+@media (max-height:500px){ #toasts{bottom:110px} #attacks{bottom:96px} }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div class="stat"><span class="ic">🪖</span><b id="sTroops">0</b><small id="sCap">/0</small></div>
+    <div class="stat"><span class="ic">💰</span><b id="sGold">0</b><small id="sGoldRate"></small></div>
+    <div class="stat"><span class="ic">🌍</span><b id="sLand">0%</b></div>
+    <button id="btnMenu" class="iconbtn" aria-label="Menu">⏸</button>
+  </div>
+  <div id="goal"><div id="goalFill"></div><div id="goalMark"></div><span id="goalTxt">Goal: 80% of the world</span></div>
+  <div id="banner"></div>
+  <div id="lb"><div id="lbHead">🏆 Leaderboard <span id="lbToggle">▾</span></div><ol id="lbList"></ol></div>
+  <div id="toasts"></div>
+  <div id="attacks"></div>
+  <div id="bottom">
+    <div id="modeBar" class="hidden"><span id="modeTxt"></span><button id="modeCancel">Cancel</button></div>
+    <div id="pctRow">
+      <span class="lbl">Send</span>
+      <button class="pct" data-p="10">10%</button><button class="pct" data-p="25">25%</button><button class="pct" data-p="35">35%</button><button class="pct" data-p="50">50%</button><button class="pct" data-p="75">75%</button>
+    </div>
+    <div id="actRow">
+      <button id="btnBuild" class="act">🏗️ Build</button>
+      <button id="btnNuke" class="act">☢️ Nuke</button>
+      <button id="btnHome" class="act">🏠 Home</button>
+      <button id="btnSpeed" class="act">⏩ 1x</button>
+    </div>
+  </div>
+</div>
+
+<!-- panels -->
+<div id="panel" class="sheet hidden"><div class="sheetHead"><b id="panelTitle"></b><button class="close" data-close>✕</button></div><div id="panelBody"></div></div>
+
+<div id="start" class="screen">
+  <div class="card">
+    <h1>Frontline<span>Conquest</span></h1>
+    <p class="tag">Claim the world, one tile at a time.</p>
+    <label>Your nation's name<input id="inName" maxlength="18" placeholder="Your nation" value=""></label>
+    <div class="grp"><div class="gl">Difficulty</div>
+      <div class="seg" id="segDiff"><button data-v="relaxed">Relaxed</button><button data-v="standard" class="on">Standard</button><button data-v="brutal">Brutal</button></div></div>
+    <div class="grp"><div class="gl">Rival nations</div>
+      <div class="seg" id="segNations"><button data-v="30">30</button><button data-v="60">60</button><button data-v="87" class="on">87</button></div></div>
+    <div class="grp"><div class="gl">Tribes</div>
+      <div class="seg" id="segTribes"><button data-v="150">150</button><button data-v="400" class="on">400</button><button data-v="600">600</button></div></div>
+    <button id="btnPlay" class="big">▶ Play</button>
+    <details id="howto"><summary>How to play</summary>
+      <ul>
+        <li><b>Start:</b> tap any unclaimed land on the world map to place your capital. AI nations can't attack you during spawn protection.</li>
+        <li><b>Attack:</b> pick how many troops to send (10–75%), then tap land next to your border: empty land, a tribe, or a nation. Your border pushes forward tile by tile until those troops run out.</li>
+        <li><b>Troops</b> regrow on their own. More land means more troops, up to your troop cap. <b>Gold</b> comes in steadily.</li>
+        <li><b>Build:</b> tap your own land (or press Build). <b>City</b> raises your troop cap, <b>Factory</b> adds gold, <b>Port</b> lets you send boats across the sea (tap land overseas), <b>Defense Post</b> makes nearby land 3× harder to take, <b>Missile Silo</b> unlocks nukes, <b>SAM</b> shoots down nukes.</li>
+        <li><b>Nukes</b> wipe out troops and buildings in a radius and leave fallout. Fallout doesn't count toward the goal, and anyone can reclaim it.</li>
+        <li><b>Alliances:</b> nations may offer you peace. Long-press (or right-click) a nation to see its info or ask for an alliance.</li>
+        <li><b>Win</b> by owning 80% of the world. You lose if your territory is wiped out.</li>
+        <li>Drag to pan, pinch or scroll to zoom.</li>
+      </ul>
+    </details>
+    <p class="foot">Single-player vs AI · plays in your browser</p>
+  </div>
+</div>
+
+<div id="loading" class="screen hidden"><div class="card"><h2>Generating world…</h2></div></div>
+
+<div id="end" class="screen hidden"><div class="card"><h2 id="endTitle"></h2><p id="endText"></p>
+  <button id="btnWatch" class="big ghost">Keep watching</button><button id="btnAgain" class="big">New game</button></div></div>
+
+<script>(()=>{"use strict";
+// Generated from Natural Earth (public domain) land data by tools/buildmap.js
+const MAP_W=1600,MAP_H=613;
+const MAP_RLE="9v,6,a,16,3,i,3,1b,s,5i,5,7,46,6,3,14,7w,c,2,f,3,7,ka,3,3,x,8,h,6,u,11,5n,3q,a,5,4,3,a,b,p,8c,u,k9,c,2,w,3,10,3,3,18,5o,3q,d,1,6,3,d,8,m,8f,q,j4,c,19,x,5,14,16,5s,3p,3,1,h,2,c,l,2,8p,m,8,7,it,a,1,5,v,y,a,s,3,6,w,62,3y,i,1,i,9f,e,5,7,1,7,is,f,8,5,g,o,1,3,2,1i,k,64,40,17,9r,m,hl,d,k,3,3,h,7,8,j,9,1,5,1,2,3,1i,d,6c,44,9,4,4,1,e,5,6,9n,n,hn,2,3,2,2,1,m,4,4,e,7,e,c,7,2,2,2,3,5,b,1,17,b,6d,8,2,3x,6,7,f,6,8,9l,j,hw,5,14,8,6,c,18,15,e,6c,9,2,44,k,9,a,9f,6,hu,5,2,b,11,4,5,5,a,2,14,3,6,b,1,l,t,66,2,4,47,8,1,2,3,7,e,d,rg,e,i,3,14,d,a,3,b,9,3,8,2,m,z,e,2,5p,4d,f,d,d,9s,7,h3,4,f,5,q,3,1p,6,a,a,7,a,2,c,q,4,n,5p,48,g,m,5,9q,g,gm,f,1c,4,26,t,2,2,13,6h,42,c,ae,g,gn,j,2d,9,q,17,3,1,x,6i,45,9,66,4,42,s,ga,b,2,9,t,4,x,3,f,h,c,3,1,1f,11,5u,3,2,4n,4,62,c,3z,q,a,2,3,3,fr,c,4,4,w,6,h,5,c,7,1,5,8,p,1,2,1,4,1,8,1,a,1,8,2,e,16,5u,ar,f,3y,1,3,n,2,m,1,2,fe,d,1,3,6,1,6,8,h,9,m,3,2,5,4,b,a,3,1,4,3,g,11,6,1b,l,1,2,3,54,2,1,a5,3,7,l,3v,1n,fe,7,2,5,d,j,d,5,i,8,2,7,1,b,m,a,2s,5,s,51,9v,u,39,d,7,9,1,1o,32,5,9,3,c9,4,9,h,b,7,1,3,2,5,a,4,1,2,1,h,d,2,9,d,3p,4x,9o,t,3h,r,1,1l,1,5,2x,b,4,9,2,2,by,6,5,4,3,i,b,f,c,8,6,a,a,3,b,b,3,2,e,m,2q,4s,9l,o,3c,2s,2,1,2x,m,3,a,c1,f,2,z,5,3,e,d,8,a,6,1l,2m,4u,5,1,9c,j,3c,32,2x,m,2,9,7,2,2,6,bo,1,1,a,2,5,2,2,3,n,5,5,f,a,7,d,6,1j,2p,4l,5,1,3,5,97,j,38,2,1,35,2z,o,2,7,8,h,by,g,9,1,1d,c,6,1k,2q,4i,2,2,9g,i,37,3,1,1m,1,f,4,y,34,8,2,7,3,4,l,c,br,g,1y,6,8,3,1,8,3,m,2,d,2v,4g,1,5,9b,i,38,3,1,1o,2,c,4,w,3d,2,c5,6,w,9,2y,2,2,2,k,2,34,49,1,c,9a,b,1,1,3g,1o,3,1,3,12,7,4,f4,l,7,2,7k,49,1,8,9b,g,3f,1s,2,3,1,y,8,7,3d,3,bo,y,29,4,c,b,4i,46,9i,e,3l,1r,2,y,9,1,3k,4,br,y,1w,2,2,2,5,5,9,l,f,9,3m,4e,96,f,1,1,3f,7,2,2l,5,9,6,1,3f,8,bj,12,12,a,f,2,1,f,7,m,b,d,7,b,2,e,2o,3u,5,f,97,f,2w,o,2,2j,e,e,3,k,l,9,1w,c,be,12,5,1,10,8,f,h,8,k,b,c,5,g,2,h,2o,3i,1,6,1,6,4,5,9g,2,2,6,1m,6,14,o,1,2k,a,k,2,k,m,e,1,6,1n,a,bb,z,4,9,q,9,1,5,j,b,b,i,b,d,3,m,2,g,2l,3h,1,1,1,h,9e,f,1o,5,16,35,2,v,1,n,4,2,f,o,d5,u,3,e,3,5,7,4,7,c,d,4,7,d,7,h,b,c,5,3,1,i,2,i,2n,3m,4,b,99,1,1,d,1m,2,7,1,w,4,5,32,2,w,1,12,4,q,d4,r,5,g,3,b,4,5,5,c,c,o,1,2,5,7,j,d,4,o,a,6,2j,4,3,3h,1,7,2,a,98,e,1n,h,9,2,o,40,2,1x,1h,b,b9,r,3,v,3,a,4,b,f,o,6,7,h,f,4,k,b,f,2f,3s,5,8,98,c,1o,h,b,2,7,5,c,5y,1a,u,aw,p,7,18,3,c,i,k,6,6,i,f,7,i,4,4,1,4,1,b,2f,1,1,3v,5,2,98,e,1m,i,b,2,a,9,a,5o,2,4,17,n,3,8,1,a,ai,o,7,1a,4,c,k,g,b,1,i,h,1,m,1,8,1,e,1,5,2c,8,1,3r,97,h,1n,i,8,4,5,2,5,c,7,5p,1e,r,1,1,1,b,ap,i,6,1c,3,d,l,6,1,6,7,5,j,i,2,1c,2d,9,2,3t,94,i,1l,i,5,8,3,o,9,5m,f,2,v,n,5,d,3v,5,6s,e,c,1o,m,5,b,a,h,j,4,17,1,3,1,1,2,6,20,7,8,33,6,g,94,j,1i,i,6,9,5,t,2,5n,d,5,a,5,7,4,4,18,3q,a,2l,1,43,7,o,1i,p,1,a,2,1,c,g,j,1,18,1,6,1,8,29,3e,3,b,1,3,94,3,3,b,1e,l,6,9,9,n,3,5p,c,n,5,1h,2,3,3g,d,2j,7,41,1,l,1o,10,g,o,6,1,4,1,p,2,w,2i,35,7,c,9b,c,19,r,5,i,2,i,4,5r,9,2h,3b,6,2r,8,1,4,4,6,48,1r,y,g,g,23,1,7,2e,2w,1,1,4,5,5,c,5p,3,a,4,33,h,16,r,6,11,1,2,2,5v,3,2k,7,m,2g,3,2k,p,5,3,4b,e,5,17,x,1,1,f,f,28,1,9,1s,a,4,2v,2,a,6,b,5f,4,2,2,1,5,3,2,3,5,1,5,1,1,36,3,1,3,18,o,7,z,1,3,3,9e,4w,3,1,11,1,a,2k,3,1x,17,r,j,g,8,1,v,3,u,1,2,1,c,1s,b,4,2s,4,3,64,3,1,6,2,4,1,6,1,b,3g,2,10,o,7,13,3,9f,4o,1,1,1r,2g,3,1d,1s,n,m,n,y,4,11,5,3,1l,7,3,34,2,c,5n,7,2,7,2,n,3g,5,x,f,2,7,6,14,1,9i,4n,2g,1g,6,5,7,9,2,w,20,l,j,z,3,2,8,5,5,6,12,2,6,1l,7,b,3g,54,3,7,2,1,y,3m,7,t,i,1,7,5,1o,2,8w,11,2,9,8,32,2m,18,6,3,3,1,a,6,4,6,7,k,1j,1,8,3,4,c,4,8,d,w,7,i,2,b,13,2,2,1j,d,6,3d,5a,4,1,15,2,4,3,5,3b,4,1,6,l,q,4,1r,1,8w,10,6,4,r,2j,2y,l,3,4,5,6,j,4,4,5,c,i,1n,9,1,b,1,1,5,6,1,4,b,1,3,p,d,h,2,8,w,1,3,1t,8,5,3a,56,1,5,3,1,2,1,1h,3g,h,d,1,2,m,5,1q,2,8v,1,3,5,j,3,5,b,w,2c,32,d,7,1,7,2,1j,g,14,2,j,g,a,9,2,1,c,o,f,f,2,b,15,1k,3,a,39,55,1f,1,m,1,2,1r,7,1b,k,e,j,6,an,1,5,1,u,b,10,25,37,9,d,1,1s,l,s,a,e,b,f,8,g,5,4,h,f,a,3,c,z,23,36,52,2,4,2,2,18,3,l,1,d,1i,7,1d,l,c,i,j,ag,1,y,8,13,1,3,1m,3r,2,9,4,20,1,5,6,m,a,3,8,5,i,f,4,2,2,e,3,7,e,g,t,p,1,6,21,35,51,2,1,2,7,18,2,15,1e,5,g,4,i,5,7,s,9,g,b,7,4,ac,1,z,5,1c,1j,5r,1,n,4,f,9,b,z,8,a,e,3,8,a,j,v,2,1,p,1w,4,4,2z,56,2,1,1,4,2m,1t,6,9,2,5,8,3,y,6,k,5,b,4,cw,1d,5s,1,p,o,9,3,3,x,3,e,g,2,a,9,e,13,v,1o,2l,1,g,5c,6,6,2m,o,9,o,4,2,5,5,j,3,11,2,l,5,c,3,cy,1e,6b,t,3,5,9,s,8,1,1,7,r,7,2,2,g,p,7,9,s,1,2,1m,2,5,2d,4,4,5q,1,1,2u,n,9,h,2u,7,b,2,d3,1e,65,n,1,a,l,j,4,2,6,3,v,7,2,1,i,m,9,2,6,2,t,1,1,1,1,1,2,1f,2m,5u,1,1,2f,1,m,h,b,d,2p,2,6,7,b,2,d7,1d,68,8,d,6,s,2,9,1,5,3,4,3,x,8,l,j,a,b,11,1c,2,2,2,5,29,5w,a,1,23,1,t,e,6,f,2z,8,c,2,d7,1e,4m,1,26,1,1,1,1,2,1e,4,y,5,o,i,9,c,11,1b,2i,5y,2,2,a,1,1p,2,12,d,5,d,31,8,dp,1d,4m,1,1,1,27,2,14,1,c,2,y,2,p,k,5,g,z,2,3,16,2i,5x,3b,c,6,b,31,8,dq,1,6,1,1,17,6r,5,1c,1,1u,13,16,16,2h,5w,2a,2,12,d,6,9,30,8,dr,4,a,15,1,2,4d,1,m,9,1e,1,1g,1,1e,1,a,15,7,3,14,13,6,1,25,5x,27,2,2,3,z,e,9,2,2u,1,7,8,du,2,d,v,2,a,1,4,4q,9,a,1,45,1,6,15,9,8,b,1,l,12,2d,5w,2h,5,s,g,32,2,2,2,3,7,df,1,z,m,8,b,4m,i,7,3,3u,6,6,2,1,16,c,8,7,1,1,3,i,1,3,10,4,1,1r,2,d,1g,4,q,3,3k,2j,9,l,7,7,3,38,a,db,1,1,3,13,g,1,2,8,9,4j,3,1,5,6,h,3y,1f,f,1,b,1,3,6,1,1,f,15,1v,2,9,1h,2,2,4,d,1,2,1,3,2,1,7,3e,1,3,1t,1,2,1,p,e,8,a,9,2,gt,4,12,f,5i,j,3b,3,3,1,g,4,2,1c,q,d,d,15,1t,1,1,1,7,1k,a,4,3,2,4,1,g,3c,1,1,2h,1,7,r,h9,5,z,b,5n,c,4,4,3h,4,a,3,6,1c,q,c,8,1,3,15,1v,1,3,1n,2,1,9,4,r,3b,18,b,v,3,a,p,hc,e,h,l,5j,7,4,3,3r,5,5,4,4,1d,v,a,7,1c,1k,1z,2,7,3,2,w,37,18,f,v,1,9,n,hd,g,f,r,5d,7,4,3,5,2,3u,5,9,u,6,1,i,2,j,a,1,1,4,1d,1k,25,13,38,1,1,13,g,16,n,hb,i,g,p,5g,4,3,2,9,1,3v,4,d,n,b,1,h,4,h,e,1,1e,1d,2b,13,35,17,e,2,2,16,9,4,b,gt,3,c,l,1,1,a,s,m,3,59,1,q,1,32,5,f,l,r,7,l,1o,1g,26,14,34,1,1,16,f,1a,8,8,9,go,1,2,6,8,t,7,t,8,3,1,1,3,7,6d,1,2o,5,k,h,f,3,1,2,z,1n,3,3,1b,28,z,35,1a,d,1b,9,c,1,gz,15,2,1h,91,7,l,i,6,d,10,1n,1,1,1d,2a,1,1,u,35,i,1,t,c,c,2,1,2,x,1,1,9,h9,2o,81,7,j,1,7,9,c,2,6,13,y,1p,1,2,19,2b,r,38,1c,c,j,1,10,8,hc,2k,8b,1,1,1,d,e,e,6,8,z,10,1m,1c,28,6,1,l,39,5,1,i,1,n,b,1p,4,he,17,1,4,1,16,8h,1,1,2,5,e,4,2,8,8,7,13,d,2,2,1,e,1m,1c,2i,c,38,1,5,4,1,9,1,w,b,1g,2,hr,16,9,x,5f,3,23,2,16,o,6,q,3,s,d,5,b,1,1,1n,1a,2o,5,3a,7,1,16,c,u,1,j,1,4,3,hp,1d,7,k,2,5,5i,3,1x,4,1a,n,3,t,3,q,g,6,8,1q,18,63,q,3,j,e,k,1,b,3,g,2,hx,20,7q,6,6,1,12,2f,f,6,1,1,5,1r,13,62,4,1,18,e,12,1,2,1,ic,1y,6n,2,4,4,w,1,1,1,c,3,n,14,7,1d,1,2,1,1,c,7,2,1u,11,60,1e,e,11,2,l,2,hu,1x,62,3,g,5,1k,2,m,13,6,m,1,z,c,21,10,5z,5,1,1a,e,1q,2,fs,7,1i,4,6,1w,2b,1,3v,4,b,3,28,1,1,14,4,c,3,6,a,7,4,k,b,21,y,5x,1h,h,1n,1,3,1,5,1,fl,4,1h,29,69,5,6,3,2c,1k,5,5,o,o,5,21,2,1,u,5v,1j,h,1m,6,fq,4,1e,2d,6a,a,2,1,29,2,1,1k,4,6,q,q,1,4,1,1y,w,5t,3,2,2,1,1b,i,1n,5,f7,2,4,1,c,4,1b,2e,68,d,16,1,16,1p,1,8,r,s,3,1x,v,5u,1i,k,j,1,1,1,i,2,g,6,ey,e,a,2,1,3,17,2k,1z,1,46,b,2,1,15,1,16,1z,r,u,1,1y,t,5v,1i,k,6,1,v,6,h,5,a,1,ej,f,9,9,13,1,1,2m,8,1,1k,4,41,1,2,3,1,a,2f,21,r,2v,q,5w,6,1,2,2,16,k,4,1,5,1,q,b,b,1,2,4,et,g,7,a,13,2r,1o,5,1,3,6,1,4,2,3q,a,2h,20,z,2,1,2o,6,3,e,5w,1i,j,r,2,b,a,d,2,eu,j,3,b,12,2u,3,4,1g,2,c,9,6f,23,10,2n,2,7,f,5w,1j,i,15,a,f7,j,2,a,12,2w,1l,4,f,a,30,2,2b,1,x,24,z,2z,3,1,4,2,2,54,1,t,1l,h,n,1,2,4,a,9,f5,u,p,7,7,2r,4,5,3,2,4,1,18,5,e,f,3n,2,1j,3,w,24,z,m,1,2d,a,55,2,r,5,1,1i,g,h,d,9,8,l,2,eg,w,h,2,3,d,3,2r,7,6,8,1,17,4,g,i,3,4,4,1,12,1,38,2,h,1,w,24,z,l,2,2f,2,1,5,56,1,s,1,1,1,1,1l,g,1,1,7,o,5,2,f7,v,g,5,2,e,2,2v,2,9,4,5,13,6,9,12,7,1,1,1,41,2,1e,25,y,k,5,2h,2,61,1p,i,1,q,fh,v,9,4b,s,4,4,b,5,1b,5j,23,11,i,7,8k,1n,u,2,a,1e,2,di,5,h,u,b,4a,r,3,6,9,5,1e,3o,4,1,5,1l,23,10,j,7,8j,n,1,t,3,1,s,er,2,4,2,4,1,6,1,2,d,f,o,d,4a,z,1x,e,1,33,9,c,2,1a,22,12,h,a,8h,1,3,j,2,a,4,7,2,b,m,ep,17,5,2,3,1,1,n,e,6,1,45,5,2,7,1,6,1,f,1w,5,2,5,1,31,3,i,1,1d,21,13,g,c,8i,1,2,f,7,6,6,h,j,4,2,g,3,18,2,cu,15,4,2,2,u,e,4,4,45,2,1,1,7,2,2,3,3,g,1y,5,3,3,1,2s,2,3,4,20,1,4,1t,12,1,6,9,1,1,d,8h,g,9,6,5,4,1,a,o,1,4,f,3,16,1,3,2,cr,27,d,5,2,4k,1,6,g,22,5,1,3,2,2s,2,12,1,18,1u,19,7,f,76,9,14,d,b,5,2,7,2,9,m,6,2,g,3,17,6,cn,27,e,4z,f,5,5,1v,1,6,2,1,3t,3,19,1w,15,1,2,1,l,6x,2,6,7,17,a,d,d,1,9,n,4,8,6,1,6,1,e,4,s,4,cl,27,f,50,3,2,8,6,2,20,4,1,2,1,3u,2,5,1,14,1y,12,1,n,1,3,6u,3,4,7,1c,3,h,c,1,a,o,1,a,e,2,19,1,cm,27,g,4z,6,2,3,6,1,2,1,1,2,1z,6,1,4,2,3u,4,13,1y,1v,6s,1,5,8,1x,m,8,3,n,ec,24,l,1,3,4v,8,6,9,20,2,2,2,1,3,1,3c,2,g,4,15,1y,1t,6w,1,2,7,1,9,1h,1,7,l,7,3,e,3,7,ea,24,r,4s,8,7,4,1,4,24,3,2,3,2,39,4,f,3,g,2,p,1y,1u,6t,3,1,i,1f,4,7,k,7,3,c,6,6,e8,25,r,4r,a,8,5,1,1,24,5,1,1,4,3s,3,f,2,q,4,5,1q,1u,6x,g,1d,6,8,j,8,1,d,8,5,e6,27,r,4r,7,e,1,2a,2,4,4,1,3q,2,c,3,16,1l,1v,6v,g,1b,3,1,5,9,i,l,ei,27,t,4o,8,2s,2,1,2,1,4,1,y,1,2p,2,c,1,1c,1i,1r,1,3,6u,3,1,c,1c,1,1,7,a,i,k,eh,26,w,4k,8,2v,2,2,1,1,2,4,y,1,2m,2,1t,1h,v,1,w,6w,1,2,b,1d,c,9,f,1,1,j,eh,27,u,1,2,4h,9,2x,1,1,2,1,2,3,2,1,x,2,3g,1,10,10,3,d,5,3,1k,6x,d,1c,a,1,1,9,e,m,9z,1,1,3,4c,27,u,1,3,4h,8,33,3,3,1,1,y,5,3,1,4a,y,2,c,b,1,1k,6w,1,1,1,1,5,3,1,1c,9,8,b,u,9y,1,4,1,49,29,s,4g,5,1,3,1,1,37,5,4,2,1,5i,16,21,6v,d,19,8,7,1,1,3,2,5,v,5p,2,47,1,4c,2b,s,4e,4,1,4,3e,3,3,10,1,3e,1,18,11,24,6v,e,17,7,2,1,3,6,3,6,u,9z,2,3,1,r,2,3a,2e,r,4e,4,4,1,3e,5,1,9,1,s,1,3d,1,1a,y,25,6j,1,b,e,19,5,1,4,2,5,13,av,3,39,2e,s,4b,3,1,1,3l,1,2,2,2,1,2,3,2,31,3,2q,k,m,3,1o,69,3,1,1,1,4,5,f,19,4,3,4,3,2,14,av,3,37,8,2,26,s,46,6,3,1,3p,1,5,3,1,5w,f,1j,1,t,1,4,68,b,3,7,1,9,19,4,1,1,2,1,4,2,z,71,1,1,2,34,1,p,4,35,9,3,27,s,44,5,44,3g,1,y,2,1g,c,1m,1,12,62,a,1,2,a,b,18,6,v,6,6,1,2,71,1,35,1,o,4,37,2i,s,43,2,47,32,1,2v,d,15,1,f,2,4,1,x,62,d,9,d,17,5,b,1,g,a,5,ay,5,3d,2c,m,8j,2,1,5u,e,1u,2,o,1,1,5x,4,1,e,b,e,15,9,5,5,b,at,1,m,5,3d,2,2,5,1,2,1,c,2,1l,k,88,4,1,2,7,3o,1,8,2,1y,e,a,2,w,1,f,4,2,5,i,2,5,5u,h,f,c,15,8,1,1,1,a,4,ax,1,m,5,3e,2,1,6,6,b,1,1m,i,43,2,45,3,1,1,7,5,2,3i,2,4,4,f,3,g,4,x,e,7,3,4,4,r,1,12,4,9,5v,f,f,d,12,o,3,ax,1,l,4,3j,4,9,a,1,1m,h,43,2,46,5,9,4,1,3h,2,5,6,1x,e,7,4,2,2,k,1,8,1,f,1,m,3,a,1,5,5o,i,d,e,w,4,1,bq,1,i,6,3i,1,f,8,2,1l,i,8b,4,d,3i,3,1,1,1,7,1x,e,9,1,21,1,j,5o,h,d,1,1,d,o,6,1,84,2,3p,1,h,7,40,2,6,1l,i,8c,4,b,2,1,3e,3,6,7,1v,2,4,9,2v,5r,e,8,k,k,1,2,95,1,3f,4,43,2,7,1l,d,8h,2,c,4,1,3c,2,1,3,3,7,z,2,v,3,3,9,z,2,1t,5q,f,9,j,1,4,f,2,1,95,1,3c,6,43,3,7,1l,b,8x,1,1,7,1,3b,2,4,7,1w,e,2u,5q,1,1,c,a,q,d,2,2,cg,4,47,2,7,1l,a,91,1,1,3,1,3c,2,5,7,1w,e,2t,5o,g,a,q,c,2,1,2,1,cd,4,48,3,6,1n,9,92,3h,1,8,5,1x,d,2u,5l,g,b,q,c,cj,2,4d,1,6,1n,9,92,1,1,3f,2,7,1,1,1,1,2,1y,a,2t,5o,b,b,t,c,ci,4,4c,2,6,1n,8,95,3f,2,b,2,20,7,2s,5r,7,e,r,e,cc,9,4c,3,7,1n,6,96,3u,1,1z,5,1,2,2p,5t,3,o,4,1,f,c,3,1,bv,1,g,3,4g,5,6,1n,4,98,3t,3,20,2,s,2,1s,8,3,6k,j,8,c0,2,4y,6,6,1m,3,9a,3s,3,d,1,a,2,1g,1,m,1,1t,8,5,6d,o,6,c3,2,4x,7,6,1n,1,98,2,6,3n,3,2s,1,1s,9,5,6d,e,1,7,5,c7,1,4y,7,6,aw,5,4,3m,2,2s,1,1s,a,4,6d,6,5,1,g,b9,1,w,2,4x,7,8,aw,9,3,83,a,5,6c,7,n,b7,4,5u,8,7,ax,4t,2,1s,1,w,l,2,h,5,6a,3,t,b8,3,5v,7,7,b0,9,2,3p,1,p,4,2l,15,5,1,4,70,h7,8,8,b0,1,1,7,1,1,3,3m,1,o,3,2m,d,5,n,4,1,3,6y,hc,7,9,b1,7,4,3k,4,o,1,1,1,26,1,1,2,b,g,6,j,9,6,1,6i,3,6,3x,1,2,1,da,8,9,b2,9,4,3i,2,3a,l,6,g,d,2,6,6f,47,3,7e,2,2z,1,2t,7,6,3,1,b4,a,3,3f,4,36,8,a,r,5,1,f,6g,aj,1,16,1,2x,2,2t,7,5,bc,7,4,3l,2,b,1,a,1,1,2,2a,5,g,p,3,1,g,69,1,7,en,2,2t,8,4,bf,6,3,3n,2,i,1,1,9,1c,1,1,2,a,2,b,4,i,n,o,63,8,1,er,1,2u,8,4,bj,1,5,43,e,1d,1,3,1,e,2,5,2,j,q,p,5z,aw,2,6x,a,2,bg,4,2,1,3,8,1,h,1,1k,1,1,2,z,2,n,f,20,3,i,r,o,63,at,3,11,2,5t,b,2,bg,9,1,1y,1,1e,2,m,m,1v,1,g,t,p,2,1,60,ax,3,x,1,35,1,2o,c,2,bh,8,1,1v,2,k,1,1f,p,1v,1,i,1,3,o,4,1,9,2,7,1,1,1,2,1,1,63,hm,c,3,bh,8,1,1s,1,22,s,y,1,1,1,r,2,n,17,3,3,5,67,hh,d,3,bi,6,1,3v,c,2,g,1q,2,n,17,2,4,5,6a,52,1,cb,e,5,bh,3z,c,3,g,1q,1,q,13,4,4,2,1,3,6a,2h,1,2e,7,1g,4,aq,f,5,bg,3z,3,2,5,a,d,12,1,k,1,s,h,3,u,3,6a,2f,1,2d,7,1h,c,2p,1,2,2,c,2,7b,g,6,bg,4j,4,6,2,1j,1,w,h,3,78,41,7,f,9,1h,f,v,1,1,1,2,1,1m,4,1,b,1,4,7b,f,3,3,2,bf,4x,1,i,1,1v,4,7,4,3,7b,3y,5,f,e,1d,h,x,3,1l,4,e,2,d,2,6y,h,1,5,1,bf,4x,a,13,1,14,4,2,5,3,1,3,79,3x,8,1,3,7,g,1a,j,t,1,4,1,1k,5,u,3,6w,i,1,5,1,bf,4n,h,3,5,x,1,16,a,2,2,2,79,3w,f,6,d,1b,1,1,i,q,2,1s,3,x,2,6v,c5,4k,9,3,9,2,6,v,1,12,1,8,2,2,1,6,7b,1r,3,1z,f,9,b,1a,m,q,1,1t,3,7t,c6,4j,a,5,g,t,1,11,2,g,7f,1,1,1m,5,20,d,c,4,1,5,18,o,p,1,1u,2,7t,k,1,bm,4i,9,9,f,1q,7,1,1,c,7g,1o,5,3,2,1v,f,f,1,1b,i,w,1,1w,1,75,3,i,l,3,bl,4h,a,9,g,1l,8,e,7j,1o,6,2,2,1v,h,8,8,19,h,w,1,93,3,h,n,4,bj,4g,1,2,5,d,e,1,1,s,1,r,6,d,7m,1n,b,1r,l,5,c,17,i,w,1,93,3,g,o,5,bi,1o,1,2t,6,d,8,5,1,3,1,1e,8,8,2,2,7o,1p,b,1q,l,3,h,13,f,4,2,u,1,9l,p,6,bg,4j,5,d,8,o,1,v,c,9,7s,18,3,e,d,1n,19,11,f,ak,q,7,bf,4j,5,c,9,k,4,w,d,7,7t,17,6,d,c,1n,1a,11,g,ah,r,b,3,2,b6,4i,6,b,3,3,4,c,c,t,g,6,7u,15,a,d,b,1m,1c,10,g,af,r,g,b7,4i,5,i,4,a,e,l,1,5,k,2,72,3,r,12,e,e,b,1k,1d,z,g,ae,r,h,b7,4i,6,h,4,9,d,s,7o,h,1,5,1,1,4,o,4,a,g,f,e,1g,1f,x,h,ac,s,i,b5,4i,7,h,2,r,1,n,7l,1j,b,4,i,e,f,1c,1j,w,h,9x,1,1,1,a,q,3,1,j,b4,4j,7,1w,7m,1j,x,f,g,1a,1m,t,j,9u,4,8,s,h,1,1,b8,4j,7,q,6,10,7n,1i,r,1,7,d,i,18,1o,s,m,9p,8,1,v,g,bc,4j,7,f,1,4,b,11,7o,1h,p,3,8,d,j,14,1r,s,l,2y,7,6i,15,2,2,2,3,7,bd,4j,6,k,a,13,7o,1i,o,3,a,c,k,13,1q,t,k,2y,6,6j,14,3,9,4,bf,4i,5,f,1,3,9,17,7n,1h,p,3,b,d,j,13,1p,u,i,3,3,f,2,3m,1,5b,18,4,a,1,bf,4j,4,e,b,1b,7m,1h,p,3,c,i,f,11,l,b,u,u,h,2,5,e,3,1u,2,1o,1,5b,1a,4,bp,1e,1,3o,7,19,1,1,1,1,7m,1f,r,2,e,g,g,12,i,h,p,w,h,1,5,f,1,8w,1a,2,bt,1d,4,50,4,1,7m,1d,1b,f,e,15,e,k,n,y,g,1,6,9c,d3,1f,2,4q,1,3,7y,19,z,1,j,e,c,19,2,1,4,q,g,11,p,9a,1b,1,br,1f,2,4q,4,4,7u,17,z,3,k,f,9,p,2,9,7,15,1,1c,g,1,7,8a,1,z,1b,1,br,6c,7x,17,w,7,l,f,7,k,3,1,6,5,b,2g,f,4,3,88,5,w,1b,7,bm,67,83,15,z,7,m,f,5,f,1,4,c,1,4,1,4,20,1,m,c,8d,7,v,1c,7,bm,68,82,14,11,5,n,9,4,3,4,e,3,3,b,2c,2,i,d,8e,7,t,1e,8,bn,j,1,5m,82,13,11,6,q,5,6,2,6,c,4,1,c,2v,f,8a,9,s,1g,9,bn,64,82,13,d,2,o,5,r,3,g,c,f,2w,f,1,2,85,9,9,4,e,1j,9,bn,64,81,14,c,4,n,5,s,4,f,c,e,2v,j,84,9,7,a,b,1j,9,bn,5v,1,7,81,15,e,1,n,6,s,5,e,d,d,1,2,2s,h,86,b,3,d,9,1k,9,bn,g,1,5d,1,4,2,1,82,15,13,2,v,5,f,b,d,3,1,2s,k,7x,1,2,e,2,e,a,1j,9,bn,5u,1,4,85,16,20,3,h,1,1,a,g,s,1,16,3,n,m,7w,x,d,1g,9,bp,5t,2,4,85,16,1y,3,j,a,1,2,d,t,2,13,3,p,m,7v,10,c,1f,8,bs,5n,1,2,2,6,84,1,1,12,20,3,k,e,9,1,2,1z,1,p,m,7w,w,g,1d,9,bt,5o,1,1,3,3,87,11,1y,1,1,2,p,1,3,7,9,2b,2,f,m,7x,v,g,1d,7,bv,5q,3,3,87,10,1n,5,1,7,1,2,n,6,1,2,1,2,d,29,1,f,m,82,r,g,1b,7,by,5p,2,1,89,z,1n,d,r,8,3,1,e,28,1,g,l,82,7,1,k,1,2,1,2,a,18,a,bx,5p,2,1,89,y,1q,a,t,8,h,28,2,g,k,4d,2,3n,5,6,n,b,16,b,bx,5n,8e,v,1v,8,t,5,l,27,3,j,h,81,4,c,i,c,14,c,bx,5n,1,1,8b,6,4,m,1c,5,h,6,s,6,j,2v,g,5o,2,2q,j,c,12,e,bz,5o,8l,k,q,4,6,8,1,a,1,2,f,3,u,1,1,3,n,2t,c,1,1,5n,4,2m,2,1,h,e,x,1,2,f,c1,5o,8l,8,w,b,1,p,1e,1,t,7,5,c,3,2,3,1w,4,5w,3,2i,n,e,w,i,c1,5o,8m,5,r,17,2a,7,7,9,8,ah,p,d,v,j,c2,w,1,4r,8m,3,q,19,2c,2,b,6,9,af,1,1,q,d,u,k,c3,y,1,4k,9h,1b,35,af,s,d,s,l,c4,5m,8n,2,l,1f,33,ae,u,d,t,l,c4,5l,8m,4,i,1i,1k,1,1,1,1f,6u,1,3i,v,c,g,1,4,5,2,i,2,1,c7,5h,8p,5,8,1,7,1j,1k,9,w,5,9,ab,v,d,e,w,1,2,c8,5f,8p,25,1p,7,r,7,9,aa,v,a,h,s,1,1,3,2,c9,5g,8o,24,2o,5,b,7k,1,1,1,2n,w,5,1,1,i,k,1,7,2,1,ce,45,1,17,8q,24,2r,1,d,ab,u,6,i,b,6,5,2,1,3,1,cl,58,8s,23,35,ae,t,1,l,9,8,7,cu,54,8s,23,35,x,1,9j,1b,6,6,4,3,5,cz,50,8s,24,35,y,1,9i,1c,1,2,1,3,9,2,4,d2,4v,8t,27,2,1,31,y,1,9j,18,2,8,8,3,4,d4,7,1,4k,8s,2c,30,6s,1,3q,q,2,e,7,3,9,dd,7,1,4i,8q,2g,2z,a9,2,8,p,2,c,a,4,3,dj,4o,8q,2k,2v,11,1,97,2,1,2,7,14,1,2,6,3,3,dj,4n,8q,2n,2,3,z,5,1k,11,1,9b,2,6,14,2,1,7,3,1,dk,4l,8r,2x,s,b,1g,13,1,9i,18,5,dq,4h,8u,30,n,d,1g,ao,15,5,dr,4h,8u,31,l,h,1d,ap,13,6,ds,4f,8u,32,l,m,17,54,1,5e,2,6,12,5,dt,9,1,44,8u,34,k,n,16,6p,2,3x,1,1,13,5,du,8,5,40,8u,35,j,t,i,1,1,2,1,1,b,4,1,5v,1,48,1,5,1,a,14,1,1,3,dv,6,8,3y,8t,38,h,x,b,9,1,1,7,6i,1,43,2,6,12,4,dw,7,7,3x,8u,3e,b,12,5,70,1,44,3,6,f2,6,7,3x,8u,3g,9,3b,2,4r,1,j,3,3s,f4,6,8,3w,8v,3h,6,8p,1,3s,f7,5,8,2t,1,4,6,2,4,m,8v,3i,4,3m,1,83,1,p,fa,6,8,2r,5,1,f,k,8u,78,3,1,2,7x,2,7,1,m,f6,5,8,2w,h,5,3,b,8u,57,1,1w,a,85,1,p,f4,7,7,26,1,4,4,4,2,9,r,a,8t,58,1,1y,9,84,1,o,f7,6,6,26,g,6,1,1,s,a,8r,59,2,1u,d,8t,f8,5,6,25,h,2,2,1,v,9,8q,5b,1,8,1,1n,b,83,1,n,1,1,f9,4,7,23,1j,9,8o,5c,2,7,1,1n,c,83,1,n,fb,5,6,20,1m,8,8m,5f,2,6,1,1o,c,8q,fc,4,6,1w,1q,9,8k,5g,2,5,2,1o,c,8p,fd,5,7,1t,1q,9,8k,5i,2,4,1,1q,c,8o,fd,6,6,1r,1,1,1q,a,80,2,e,5m,2,3,2,1p,c,8n,fe,6,9,1o,1s,1,1,8,80,2,a,5r,2,2,4,1o,c,8k,fd,a,8,1o,1t,a,8a,5s,9,1n,g,8f,ff,a,8,1n,1t,a,8a,5t,8,1p,f,8e,ff,a,9,1l,1u,a,8a,5t,9,1o,g,8c,fj,8,9,1j,1w,6,2,2,88,5v,9,1p,g,a,2,1,3,7t,fl,1,1,7,8,1j,1w,5,1,3,88,5v,9,1q,g,7,9,7q,1,1,fo,6,a,1i,1w,8,86,5x,a,1p,l,1,a,7q,fr,6,a,1g,1x,8,84,60,a,1p,r,1,3,7r,fs,4,9,1i,1x,7,84,60,b,1n,5,1,l,2,3,7p,fv,3,9,1i,1y,6,83,62,a,1o,3,3,k,2,4,7p,fu,4,8,1,1,1g,1z,4,84,63,a,1n,3,3,j,2,8,7l,fv,5,a,1e,20,4,83,64,b,1n,2,3,h,5,e,s,3,6i,fv,6,b,1c,21,2,85,65,a,1o,1,3,h,5,l,1,1,2,k,6h,a,2,fl,7,a,1c,2e,1,7s,65,b,1n,1,3,f,7,19,6h,9,4,fl,5,c,1a,2e,2,7s,66,a,1r,e,8,1c,6d,9,4,fn,4,d,18,2f,3,7q,67,a,1q,e,a,1b,69,c,5,fo,3,e,18,a6,69,a,1r,6,1,5,b,1a,6a,b,5,fq,4,d,15,a6,6b,b,1p,3,k,1b,68,b,6,fr,4,d,15,a3,6d,c,2e,1a,3,1,60,c,6,ft,4,d,14,a3,6d,d,2i,16,62,d,6,fu,4,d,13,a3,6d,e,2i,17,2p,1,38,f,6,fv,2,e,13,1w,2,84,6e,e,2i,17,5x,g,6,fv,1,g,12,1s,e,7w,6f,e,2i,18,4,2,2h,1,2t,1,c,h,5,ge,10,1q,j,7t,6h,d,2j,1c,2j,1,2,1,2p,2,3,1,1,n,4,gg,z,1o,6,6,a,7s,6j,c,2k,19,2l,4,2p,2,1,r,3,gg,z,1o,5,6,f,7n,6l,b,2k,15,e,2,24,1,4,4,2p,1,2,s,1,gh,10,1m,3,g,a,1,1,7i,6n,9,2k,16,e,1,1x,1,7,1,2,6,2m,y,1,gi,z,1m,1,6,2,b,b,7i,6n,9,2k,18,b,3,1w,1,5,c,21,1,e,1,3,hj,y,16,1,3,1,h,3,e,2,1,6,7h,6n,a,2i,1a,b,2,1t,k,21,4,b,ho,z,10,b,11,7,7e,6p,9,2h,1c,a,2,1r,n,1x,a,4,hs,z,w,f,11,b,7a,6q,8,2g,1e,8,3,1r,n,1x,9,3,hu,10,u,g,12,c,79,6o,a,2e,1g,5,6,1q,o,1s,3,1,9,3,hu,10,u,f,17,b,77,6n,b,2d,1r,1r,o,1r,e,2,ht,12,t,e,19,b,77,6m,b,2a,1,1,1s,1q,q,1q,f,2,bk,1,67,a,2,r,s,d,19,f,75,6l,d,27,1u,1q,r,1p,c2,3,65,14,r,d,18,c,79,6l,f,25,1u,1p,v,1l,h,2,1,1,bi,4,65,13,q,e,1r,5,2,5,6q,6m,f,24,1u,1k,1,1,y,1k,e,8,bi,5,65,13,p,e,1t,d,6m,6n,g,23,1u,1k,11,1i,e,9,bi,4,67,12,p,d,1v,d,6l,6n,g,23,1v,1i,14,1g,d,9,bj,2,6b,11,m,g,1u,e,6l,6m,h,22,1v,1h,13,1i,d,8,hz,10,k,h,1u,i,6h,6m,h,1z,1y,1g,16,1g,d,8,i0,12,c,3,2,e,1,1,1w,i,6g,6o,f,1x,20,1f,18,11,1,d,d,7,i2,13,5,n,2,1,16,5,c,l,1,5,5,6,66,6o,f,1w,20,1e,19,1g,d,5,1b,4,gq,12,1,r,19,7,b,1,3,3,2,4,h,7,65,6p,f,1u,21,1d,1b,1g,1s,7,gq,1r,1a,7,k,3,h,2,1,3,66,6r,d,1t,23,1a,1d,1h,1q,8,gt,1o,22,1,6u,6r,e,1o,27,19,1e,1h,1q,8,gu,1n,8x,6s,f,1m,27,18,1f,1i,1p,8,gw,1l,8w,6t,f,1m,27,16,1h,1j,1o,9,gx,1j,8w,6t,g,1k,29,14,1i,b,1,18,1n,9,h0,1g,8v,6v,f,1e,2f,14,1i,a,2,19,1m,9,h3,1c,8w,6v,g,1a,2i,14,1h,b,3,19,1l,9,h6,19,8w,6v,g,17,2l,12,1j,9,5,1a,1k,8,h9,d,3,q,8x,6v,g,16,2m,z,1m,1,1,5,8,1b,1f,2,1,8,hb,9,8,m,d,1,3,1,8g,6w,f,16,2n,y,1p,1,1,1,9,1b,1f,9,hh,3,b,16,8c,6x,f,16,2n,u,25,1c,1f,7,hy,h,1,m,8c,6y,e,15,2p,s,27,1c,1e,7,hz,15,89,6z,1,1,c,13,2r,s,26,1e,1d,7,i0,16,86,73,c,y,2w,r,27,1d,1e,6,i1,14,86,76,a,v,30,q,27,1d,1e,7,i1,14,86,77,8,s,33,q,27,1e,1e,1,2,3,i2,13,87,77,7,r,35,p,28,1d,1g,4,i3,12,87,78,7,p,36,p,28,1d,1f,5,2,3,i1,1,1,w,89,78,6,k,3b,p,29,1d,1e,8,1,2,1,1,i3,t,89,79,5,j,3d,p,28,1d,1g,2,3,1,2,3,i6,q,8a,3,1,75,4,g,3g,p,28,8,3,12,1d,3,9,3,i9,3,1,i,88,7b,4,a,3m,p,29,6,5,11,1e,3,9,2,ie,h,89,3t,2,3h,3,8,3n,p,29,7,3,d,2,n,1f,3,9,3,ib,i,88,7f,1,7,3p,o,1j,1,p,6,4,e,1,n,1f,3,b,1,ic,h,89,7e,19,5,2j,n,1k,1,q,5,9,a,1,m,1f,3,9,1,if,2,2,b,1h,2,6r,7f,19,2,2m,m,1k,1,q,5,b,u,1h,2,8,2,3,4,i9,e,1f,5,4,1,6m,6m,2,q,3x,l,1l,1,q,5,c,t,1s,2,2,5,i9,3,2,8,1f,4,5,2,6n,2,2,6f,3,p,x,2,30,k,2b,6,d,s,1y,3,ia,2,4,6,1d,4,7,2,6p,1,1,73,1,1,y,4,30,j,2c,4,f,r,1m,1,c,2,ib,2,3,5,1c,5,8,5,6m,79,t,6,31,j,2c,4,f,r,1m,4,8,3,ic,2,3,4,17,b,5,a,6k,79,l,d,32,i,2c,4,f,p,1n,5,6,5,id,9,13,2,1,b,2,d,6l,79,f,i,32,i,2c,3,g,2,1,l,1c,1,b,4,7,3,if,a,11,u,v,2,5q,78,8,3,1,k,32,i,2b,4,j,j,1e,2,a,3,2,2,1,1,4,1,if,a,10,w,4,5,8,1,1,5,6,2,5q,2d,1,4v,5,q,33,h,2b,3,m,c,1,2,1g,3,9,1,3,3,1,1,4,1,ie,c,y,h,2,o,7,7,6,2,5r,2c,1,5p,34,f,1,1,2b,3,o,a,1i,2,f,2,1,2,4,2,ie,2,1,8,y,g,3,r,2,9,4,3,5u,80,35,d,2f,2,q,8,1h,2,g,2,1,1,2,1,2,2,if,3,1,7,x,g,4,13,1,1,5y,29,1,5p,35,d,2e,3,q,6,1i,1,g,3,3,4,ij,1,2,8,w,g,4,17,5w,7z,36,b,5,1,29,3,p,8,1g,2,g,3,4,2,ip,8,b,6,c,i,3,1a,5u,7y,35,c,5,2,27,4,p,6,1h,2,i,3,a,2,ik,7,9,9,8,k,2,1a,5w,7w,37,a,6,3,26,7,m,4,1i,2,k,2,a,3,ij,7,1,1,4,6,2,5,7,1v,5x,7w,37,8,7,5,25,7,m,2,1j,2,v,5,ij,i,4,6,3,1x,5x,1g,1,1,2,6b,39,6,8,6,24,7,m,2,1i,2,v,6,ij,2,1,e,6,6,1,1x,2,4,5t,1m,1,67,3a,5,8,6,24,8,2v,2,3,8,im,1,1,1,1,8,9,6,1,24,5q,7u,3c,3,9,7,23,9,2t,4,1,a,ir,5,a,6,1,26,5q,1j,1,1,1,65,3p,7,25,7,2q,i,ir,2,1,3,9,2e,5p,1k,2,64,3p,9,25,6,2p,j,iu,4,8,2f,5o,1,1,1h,1,1,1,64,3q,8,26,4,2q,1,2,3,2,c,it,3,a,2f,5p,1j,1,64,3q,9,26,5,2n,2,8,b,j7,2e,5r,1h,1,63,3r,9,27,3,22,1,l,1,9,6,1,3,j9,2d,5t,1f,1,62,3s,9,27,5,20,1,l,1,8,7,2,2,j9,2g,5r,1b,1,65,3s,9,28,8,1u,1,1,1,l,1,8,6,3,1,jb,2b,1,4,5s,1b,2,e,1,48,1,1d,3t,8,2a,7,1u,5,j,1,8,7,2,1,jb,2h,5r,1k,c,44,1,1d,3u,6,2b,9,1r,6,t,6,je,2i,5s,1f,g,5h,3v,2,2f,9,1p,7,v,2,1,2,je,2m,1,8,5g,1c,i,5f,6d,a,1o,9,w,1,je,2y,5f,17,o,5c,5s,1,l,b,1m,c,k9,31,5d,14,q,5c,5r,4,i,d,1j,h,k6,32,5d,i,a,8,t,5b,5s,b,c,d,1j,g,k6,2r,1,c,5d,c,g,3,w,5a,5u,b,c,c,1f,1,1,d,kb,2q,2,d,5d,8,1j,6,1,5,1,4w,5v,b,b,d,1d,h,ka,36,5f,3,1m,7,7,3c,1,1g,5x,a,b,d,1b,k,k8,37,1,1,7g,3c,1,1f,5z,a,a,d,1a,h,ke,37,7h,1,1,38,2,1e,61,a,a,c,19,h,kf,38,7h,39,2,1d,63,a,9,b,19,j,ke,38,7d,2,3,38,2,1d,65,a,8,b,18,h,kf,39,7c,2,5,38,1,1c,67,a,8,a,17,k,kc,3a,7j,39,1,1a,68,c,6,a,16,k,kd,3b,7i,39,2,18,6a,b,6,a,12,p,kb,3c,7i,3a,1,17,6c,b,6,a,y,t,k7,3f,7i,3a,1,15,6e,c,7,9,x,t,1a,2,iv,3g,7h,4f,6h,b,1,1,5,8,w,v,19,2,iv,3g,7h,2m,2,1p,6k,d,1,1,4,7,v,u,18,1,iw,3k,7e,2m,2,1o,6n,e,6,5,n,2,6,v,16,2,iw,3l,7d,2l,2,7,2,1f,6p,g,4,4,m,7,1,x,t,2,a,2,2,1,iu,3k,7c,2l,2,a,1,1d,6j,2,5,g,6,1,n,16,r,2,a,3,1,2,is,3m,7c,4a,6l,2,5,e,2,2,4,3,j,18,9,3,d,2,b,2,1,3,ip,3o,7e,47,6o,1,5,j,5,1,j,14,1,3,6,1,1,e,1,3,d,3,iq,3o,7f,46,6p,1,5,j,p,13,b,k,d,4,ip,3n,7f,46,6x,j,o,13,a,2,c,6,e,2,1,2,io,3m,1,4,7a,1,2,2v,3,15,6z,j,o,11,a,2,y,1,ir,3l,6,2,78,2u,8,13,71,i,o,11,b,1,x,2,iq,3l,3,9,75,2i,2,9,a,1,2,y,73,h,o,11,a,1,z,1,he,1,1a,3l,4,a,74,2h,2,a,a,11,74,f,p,11,a,2,v,2,k,4,gr,2,1a,3k,1,2,1,a,2,4,6x,14,2,1o,a,11,75,f,q,11,a,1,c,3,g,3,i,7,go,3,19,3n,2,a,1,8,6u,15,1,1o,b,z,70,1,6,f,q,y,a,4,5,1,1,4,1,1,z,d,hx,3k,1,1,1,2,1,8,2,b,6s,2u,9,z,70,2,6,i,m,2,1,v,b,5,3,6,12,d,hx,3l,1,3,1,8,2,d,6r,2s,9,10,71,2,6,h,p,u,b,7,1,6,2,3,i,1,e,f,hw,3j,1,b,3,f,1,1,6q,2r,9,z,72,2,6,h,5,2,i,t,c,d,4,1,i,4,g,a,f,3,hf,3q,7,k,6o,2f,1,b,7,10,7c,h,3,4,h,s,d,b,c,8,g,3,7,9,d,8,hc,3v,1,l,6o,2f,1,b,7,z,7d,i,1,5,h,s,d,a,j,1,i,1,8,9,d,a,h9,3w,1,k,6q,2e,1,c,8,w,7e,i,4,2,h,t,c,b,1i,1,a,f,h9,3,1,4c,1,1,2,3,6i,2q,2,2,1,2,1,w,7g,g,1,3,2,3,g,s,b,d,1d,2,1,3,9,j,h7,4e,1,9,6g,2p,1,11,7j,k,1,3,4,3,9,r,b,8,2,5,18,2,1,7,8,o,h4,4c,1,l,67,3p,7k,k,2,2,3,3,c,1,1,1,1,k,b,6,4,6,p,9,a,b,5,r,h2,50,66,3n,7m,j,7,1,i,5,1,d,c,7,3,6,g,5,5,a,9,a,4,u,gy,54,64,3n,7n,i,q,1,7,1,2,9,b,7,2,7,g,5,6,1,3,1,2,3,9,1b,gt,56,65,3k,7p,g,13,6,1,1,e,4,3,5,i,4,e,3,8,3,2,18,gq,58,64,28,2,1a,7q,g,12,4,3,1,e,4,4,6,19,3,3,1a,10,1,fl,5a,64,27,2,19,7r,f,13,2,l,3,5,5,1i,19,y,2,fj,5c,64,26,2,19,7t,d,1q,3,5,6,1i,19,t,3,2,2,fi,5e,63,26,2,17,7v,d,1p,3,5,3,3,1,1l,17,r,3,2,1,fj,5f,63,24,3,16,7x,c,1o,4,5,3,1,4,1n,15,q,3,2,1,fj,5h,61,24,3,16,7z,a,1o,4,9,1,1,1,1r,12,o,4,fn,5o,5v,24,2,16,80,9,1o,4,9,1,1,1,1t,10,n,5,fo,5n,5v,24,2,15,82,7,1p,4,26,z,n,5,fp,5n,5u,24,3,14,83,1,1,2,1,1,1q,1,1s,2,f,11,8,e,f,1,fa,5p,5v,2,1,20,3,14,bs,2,g,12,8,b,g,2,fa,5o,5v,23,2,15,8a,7,3a,3,g,15,8,6,j,2,fa,5n,5v,24,1,15,89,c,36,1,1,1,g,16,x,2,fb,5m,5v,23,3,14,87,d,a,2,2u,2,i,15,x,3,fc,5k,5v,23,4,14,85,f,9,5,2r,1,k,10,12,2,fc,5k,5w,23,4,14,89,r,1,6,31,11,gh,5j,5w,25,2,13,8a,s,2b,1,w,11,gg,5j,5x,24,2,13,8d,p,2a,2,t,14,gh,5i,5x,24,2,5,2,w,8g,4,1,j,3,2,1h,3,j,2,s,q,1,1,3,c,gf,5i,5x,25,2,5,2,v,8q,k,1g,1,l,1,t,4,1,m,6,b,1d,2,f1,5g,5y,25,2,11,8s,j,1,2,b,1,2f,4,3,2,1,g,b,9,1d,2,f0,5g,5y,24,3,11,90,3,2,4,1,5,2,3,5,3,1,1,5,4,q,1,1b,3,8,c,f,9,gf,5e,5z,1x,1,8,2,10,98,2,2,2,3,2,1,4,2,4,4,a,e,8,1n,e,d,8,gf,5e,5z,1w,2,1a,9g,3,1,6,1,1,9,6,e,7,1q,c,e,9,gf,5c,5z,1w,3,1b,9j,2,x,6,1u,b,f,8,2,1,gc,5c,5z,1w,2,1c,ag,6,23,1,j,a,gd,5a,61,1v,1,1d,9t,5,g,6,2q,9,1a,4,ez,59,62,2k,1,p,9s,7,e,5,2s,c,17,4,ey,58,63,2k,2,o,9w,4,c,5,2u,a,gb,56,65,2j,3,o,9w,3,d,3,2y,9,g9,56,65,2k,2,q,di,3,1d,1,ev,53,68,2j,2,q,dj,2,1d,3,eu,51,69,2j,2,q,cl,1,h9,50,6b,1y,1,j,2,q,ck,2,h9,4z,6b,1y,2,j,2,q,b7,1,1c,3,h9,4y,6b,2j,3,p,b4,4,5,2,14,4,ha,4w,6c,2j,3,p,b5,2,7,3,12,4,ha,4w,6c,2j,3,p,bd,7,a,1,o,5,ha,4u,6d,2i,3,q,12,1,a4,1,5,b,1,2,3,1,n,6,hb,4t,6c,2k,2,q,12,2,a2,n,1,2,m,7,ha,4s,6c,2l,3,p,11,4,a0,q,o,6,hb,4o,1,1,6c,2m,3,p,11,4,9y,s,n,8,ha,4n,6e,2o,2,p,11,5,9w,t,m,9,hb,4m,6d,2p,2,p,11,5,9x,p,p,9,5e,2,bv,4l,6e,2p,2,p,z,7,9v,r,p,9,5f,2,bu,4l,6e,2q,2,o,x,a,9u,r,3,1,l,9,hb,4m,6c,2r,2,o,x,a,9d,1,2,3,a,s,2,2,l,9,hb,4m,6c,2r,1,1,1,o,w,a,9d,8,7,t,2,3,k,a,hb,4l,6c,3i,v,b,9b,1,1,8,7,s,q,e,h8,4j,6d,2t,1,o,v,b,9a,c,7,q,r,f,h8,4j,6b,3j,t,e,99,c,2,4,1,q,r,g,h8,4i,6b,3j,s,f,97,e,1,x,q,h,2o,1,ej,o,1,3s,6b,3j,r,g,95,2,1,1d,o,h,2n,2,el,m,2,3r,6a,3j,q,f,1,2,95,1h,n,h,2n,2,em,k,4,3q,6a,3i,p,1,1,f,1,2,95,1i,m,h,hd,k,3,3p,69,3i,o,j,99,1k,i,i,hf,j,3,3o,69,3h,l,n,94,1,3,j,1,13,g,i,48,2,d7,i,1,3o,6b,3g,k,p,90,1,2,m,1,15,f,i,46,3,db,44,6b,20,3,1b,m,o,91,1,2,1t,e,j,43,6,db,43,6a,20,1,1d,n,o,90,2,4,1v,9,l,42,1,di,41,6a,1y,2,1b,p,o,8z,5,1,1x,8,n,hm,3z,6a,1y,1,1a,r,o,8z,24,7,n,3y,1,dn,3z,6a,1x,1,19,s,p,8z,26,4,o,3w,4,dn,3y,6a,1w,1,18,v,o,8z,2y,3v,6,dn,3v,6c,34,w,o,90,2x,3v,6,dp,3t,6d,33,w,n,90,2z,hp,3t,6e,31,x,n,8y,31,hp,3s,6g,2z,z,m,8y,31,hp,3s,6g,2x,11,l,8y,32,hq,3s,6g,2u,13,l,8y,34,ho,3r,6h,2u,13,l,8x,37,hm,3r,6i,2r,16,j,8x,3a,hk,2d,1,1c,6k,2o,17,k,8u,3e,hj,2d,1,1b,6l,2o,17,k,8o,3m,hh,2b,3,1b,6m,2n,17,j,8n,3q,hf,3p,6m,2n,16,k,8k,3t,1x,2,fg,3o,6n,2o,15,k,8e,3z,1y,3,8,2,f4,3n,6p,2o,13,k,v,2,7g,43,1x,3,7,2,f4,3m,6r,2n,13,k,v,2,7f,44,1y,3,fd,3l,6r,2n,11,m,8a,47,1y,3,fb,3m,6s,2n,10,l,8a,48,1z,4,f9,3m,6s,2n,10,l,88,4a,21,3,f8,3l,6u,2m,z,m,84,1,2,4c,22,3,f6,3j,6x,2m,y,l,85,1,1,4d,1,2,21,1,f6,3i,6y,2m,y,l,84,4l,h6,3c,1,5,6z,2l,z,k,85,4k,h5,39,2,2,74,2m,z,j,86,4k,h4,38,7a,2m,10,i,86,4k,h4,36,7c,2l,11,i,86,4k,h5,33,7e,2l,11,i,85,4m,h4,30,7h,2m,10,h,85,4p,h2,1z,1,y,7j,2m,10,h,85,4r,gz,2x,7m,2k,11,g,86,4r,gz,20,1,v,7n,2j,13,f,86,4s,gy,20,1,t,7q,2g,15,f,87,4t,gx,2s,7r,2d,19,d,88,4t,gx,1y,2,s,7r,2a,1d,8,8d,4t,1,1,gt,2q,7u,29,1h,3,8f,4v,gt,2r,7t,28,a1,4t,gu,2q,7u,27,a3,4t,gt,2q,7u,27,a3,4t,gt,2q,7v,27,9y,1,1,4u,gu,2q,7v,27,9y,4x,gs,2r,7v,27,9z,4w,gs,2r,7w,26,a0,4v,gs,2r,7w,26,a1,4u,gs,2s,7w,24,a2,4u,gr,2s,7x,24,a2,4v,gq,2s,7y,23,a2,2t,2,20,gq,2s,7z,22,a3,2t,3,1y,gq,2r,81,20,a5,2s,3,1z,go,2s,82,1y,a6,2r,4,1z,gn,2r,85,1w,a7,2r,4,1z,gn,2q,87,1u,a9,4s,gp,2o,88,1t,ab,4r,gp,2n,8a,1r,ac,4r,gp,2n,8a,1q,ad,4q,gq,2m,8b,1q,ad,4q,gp,2n,8c,1o,ae,4q,go,2j,3,1,8d,1n,af,4p,gp,13,3,1d,3,1,8e,1m,ag,4o,gp,14,1,1e,8i,1l,ah,4o,gq,2h,8k,1j,aj,4n,gq,2f,8n,1h,ak,4n,gq,2f,8n,1g,am,1w,2,2o,gq,2e,8p,1e,an,1m,e,2l,gr,2e,8p,1c,ap,1k,i,1,1,2g,gs,2e,8p,1c,ap,1g,s,2c,gs,2b,1,1,8q,1a,ar,19,11,2a,gs,1n,1,m,2,1,8q,19,as,16,15,f,1,1s,gt,1n,1,l,1,3,8o,1a,at,14,16,g,1,1q,gu,1n,1,l,1,3,8q,17,av,12,19,e,2,1p,gv,1n,1,o,8s,15,aw,11,1c,c,2,1o,gx,2a,8u,12,av,1,1,12,1c,b,3,1n,gx,2a,8v,w,b1,13,1e,8,4,1o,gw,1o,1,l,8w,i,1,3,2,5,2,1,b1,l,1x,5,5,1p,gw,1o,2,j,8z,e,bh,k,1y,5,5,1o,gx,1o,6,e,92,5,br,f,21,3,6,2,2,1k,gx,1p,7,b,94,3,bt,c,23,2,7,2,2,1j,gx,1t,lh,8,2c,3,4,1i,2r,2,e4,1u,o0,2,4,1j,2s,4,e0,1w,o5,3,1,1e,2t,1,1,3,dy,1x,o0,1,3,2,2,1e,2v,5,dx,1w,ny,7,5,1d,2w,3,dx,1x,ob,1b,2y,3,dw,1y,ob,1a,2y,1,1,2,dv,20,o9,1a,2z,3,du,21,oa,19,30,2,3,1,dq,21,o9,19,32,3,1,2,dp,20,oa,1a,32,2,1,2,dn,21,oc,19,32,5,dn,20,oe,16,34,6,8,2,dc,20,of,y,3b,8,4,4,dc,1z,oj,f,3,b,3d,g,dc,1y,ol,2,1,b,2,2,1,8,3d,h,dc,1v,ou,6,6,7,3f,g,de,1q,p1,2,9,2,3i,5,2,8,df,1d,3,3,t2,g,dg,1c,t5,f,3,1,df,1e,t5,d,dk,1e,t7,c,di,1e,ta,a,di,1e,tb,8,di,1f,tc,6,dj,1f,t0,1,b,5,dk,13,1,b,pk,3,3c,2,a,6,dj,5,1,x,5,6,pm,5,5,6,2y,4,3,2,3,6,dk,5,1,y,pw,g,2y,4,1,5,1,6,dm,13,px,f,2x,a,5,1,do,3,2,y,px,f,2x,a,dt,2,3,z,py,e,2v,c,dt,3,4,x,5,1,pt,c,2w,b,dt,3,4,10,2,2,pu,b,2v,b,du,2,4,10,2,3,pt,b,2w,a,dv,3,3,10,3,2,pt,b,2u,c,dv,3,4,11,px,8,1,2,2s,b,dw,3,4,z,q1,6,2u,c,e3,z,q3,4,2u,d,e3,z,sz,g,e2,z,sx,e,e5,10,su,e,e8,1,1,y,st,e,e4,2,1,1,1,2,1,w,st,f,e4,4,1,1,1,w,ss,h,e5,2,2,v,su,h,e5,1,1,1,3,r,sx,h,e5,1,1,u,sw,i,e6,1,3,s,sx,h,e3,5,2,r,sx,g,e6,3,1,1,1,r,sx,3,1,b,e5,z,t4,7,e7,z,17j,1,1,w,t0,1,ej,10,sv,3,eh,13,17e,12,17a,1,1,4,1,y,17b,1,6,y,179,1,1,2,1,11,17a,4,1,z,17c,2,4,w,17e,2,1,y,gt,2,qk,1,1,y,gu,1,1,1,3,1,qg,4,2,s,gv,7,qg,2,1,1,3,4,2,l,gv,1,1,4,qh,4,1,t,17m,q,1,2,17n,7,4,f,17p,1,2,4,1,h,17p,4,1,m,17q,4,1,k,17t,o,17v,l,13,1,5,2,16j,5,1,e,15,4,1,5,16c,2,4,5,1,g,12,3,1,5,16e,2,4,1,2,j,14,2,1,1,16g,1,2,7,1,d,2,3,17r,j,180,2,3,7,4,5,17u,2,1,5,3,1,3,8,17s,2,2,3,3,3,2,9,17w,9,3,1,3,5,17s,5,1,6,5,8,17s,5,3,2,4,b,17t,2,1,4,6,c,17v,1,2,1,2,2,3,c,3o,4,141,7,1,h,3p,2,145,p,3l,2,143,3,2,3,3,1,1,3,3,3,17z,3,1,3,1,5,2,1,182,1,2,3,efj";
+
+// Frontline Conquest - simulation (no DOM). Original code.
+
+const W = MAP_W, H = MAP_H, N = W * H;
+const TPS = 10; // ticks per second
+
+const BUILDINGS = {
+  city:    { name: 'City',         cost: 5000,  icon: 'C', desc: '+15K max troops' },
+  factory: { name: 'Factory',      cost: 4000,  icon: 'F', desc: '+40 gold / sec' },
+  port:    { name: 'Port',         cost: 3000,  icon: 'P', desc: 'Coast only. Send boat invasions across water' },
+  defense: { name: 'Defense Post', cost: 2000,  icon: 'D', desc: 'Enemies pay 3x to take land within 12 tiles' },
+  silo:    { name: 'Missile Silo', cost: 12000, icon: 'M', desc: 'Lets you launch nukes' },
+  sam:     { name: 'SAM Site',     cost: 8000,  icon: 'S', desc: '75% chance to shoot down nukes within 70 tiles' },
+};
+const NUKES = {
+  atom:     { name: 'Atom Bomb',     cost: 8000,  radius: 10 },
+  hydrogen: { name: 'Hydrogen Bomb', cost: 30000, radius: 24 },
+};
+const DIFFS = {
+  relaxed:  { label: 'Relaxed',  regen: 0.85, protect: 180, aggr: 0.15, nukes: false, nukeTick: 1e9,  humanBias: 0.6, think: 14 },
+  standard: { label: 'Standard', regen: 1.0,  protect: 120, aggr: 0.3,  nukes: true,  nukeTick: 4800, humanBias: 1.0, think: 10 },
+  brutal:   { label: 'Brutal',   regen: 1.2,  protect: 60,  aggr: 0.5,  nukes: true,  nukeTick: 2400, humanBias: 1.6, think: 7 },
+};
+const TERR_MULT = [1, 1.4, 2.0];
+const SAM_RANGE = 70, DEF_RANGE = 12, FALLOUT = 240;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- static map (built once) ----------
+let MAP = null;
+function getMap() {
+  if (MAP) return MAP;
+  const land = new Uint8Array(N);
+  let i = 0, v = 0;
+  for (const r of MAP_RLE.split(',')) { const n = parseInt(r, 36); if (v) land.fill(1, i, i + n); i += n; v ^= 1; }
+  // value-noise elevation
+  const rng = mulberry32(1337);
+  const G = 64, grid = new Float32Array(G * G);
+  for (let k = 0; k < G * G; k++) grid[k] = rng();
+  const vn = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const a = grid[((yi & 63) * G) + (xi & 63)], b = grid[((yi & 63) * G) + ((xi + 1) & 63)];
+    const c = grid[(((yi + 1) & 63) * G) + (xi & 63)], d = grid[(((yi + 1) & 63) * G) + ((xi + 1) & 63)];
+    const u = xf * xf * (3 - 2 * xf), w = yf * yf * (3 - 2 * yf);
+    return a + (b - a) * u + (c - a) * w + (a - b - c + d) * u * w;
+  };
+  // distance from coast (land: inland distance, water: offshore distance)
+  const dist = new Uint8Array(N).fill(255);
+  const q = new Int32Array(N); let qh = 0, qt = 0;
+  for (let t = 0; t < N; t++) {
+    const x = t % W, l = land[t];
+    if ((x > 0 && land[t - 1] !== l) || (x < W - 1 && land[t + 1] !== l) || (t >= W && land[t - W] !== l) || (t < N - W && land[t + W] !== l)) { dist[t] = 0; q[qt++] = t; }
+  }
+  while (qh < qt) {
+    const t = q[qh++], x = t % W, d = dist[t] + 1; if (d > 250) continue;
+    const l = land[t];
+    if (x > 0 && dist[t - 1] === 255 && land[t - 1] === l) { dist[t - 1] = d; q[qt++] = t - 1; }
+    if (x < W - 1 && dist[t + 1] === 255 && land[t + 1] === l) { dist[t + 1] = d; q[qt++] = t + 1; }
+    if (t >= W && dist[t - W] === 255 && land[t - W] === l) { dist[t - W] = d; q[qt++] = t - W; }
+    if (t < N - W && dist[t + W] === 255 && land[t + W] === l) { dist[t + W] = d; q[qt++] = t + W; }
+  }
+  const terr = new Uint8Array(N), elev = new Float32Array(N), coastal = new Uint8Array(N);
+  let landCount = 0; const coastList = [];
+  for (let t = 0; t < N; t++) {
+    if (!land[t]) continue;
+    landCount++;
+    const x = t % W, y = (t / W) | 0;
+    let e = vn(x / 40, y / 40) * 0.5 + vn(x / 16, y / 16) * 0.3 + vn(x / 6, y / 6) * 0.2;
+    e = e * 0.8 + Math.min(dist[t] / 60, 1) * 0.3;
+    elev[t] = e;
+    terr[t] = e > 0.78 ? 2 : e > 0.62 ? 1 : 0;
+    if (dist[t] === 0) { coastal[t] = 1; coastList.push(t); }
+  }
+  // landmass ids
+  const mass = new Int32Array(N).fill(-1), massSize = [];
+  for (let t = 0; t < N; t++) if (land[t] && mass[t] < 0) {
+    const id = massSize.length; let h = 0, tl = 0; q[tl++] = t; mass[t] = id;
+    while (h < tl) {
+      const c = q[h++], x = c % W;
+      if (x > 0 && land[c - 1] && mass[c - 1] < 0) { mass[c - 1] = id; q[tl++] = c - 1; }
+      if (x < W - 1 && land[c + 1] && mass[c + 1] < 0) { mass[c + 1] = id; q[tl++] = c + 1; }
+      if (c >= W && land[c - W] && mass[c - W] < 0) { mass[c - W] = id; q[tl++] = c - W; }
+      if (c < N - W && land[c + W] && mass[c + W] < 0) { mass[c + W] = id; q[tl++] = c + W; }
+    }
+    massSize.push(tl);
+  }
+  MAP = { land, terr, elev, dist, coastal, coastList: Int32Array.from(coastList), mass, massSize, landCount };
+  return MAP;
+}
+
+// ---------- names ----------
+const SYL_A = ['Var', 'Kel', 'Mor', 'Ast', 'Bel', 'Cor', 'Dra', 'Ery', 'Fal', 'Gor', 'Hal', 'Ise', 'Jor', 'Kar', 'Lum', 'Mar', 'Nor', 'Ost', 'Pel', 'Quor', 'Ras', 'Sol', 'Tal', 'Ul', 'Ves', 'Wyn', 'Xan', 'Yr', 'Zan', 'Bra', 'Cal', 'Dun', 'Eld', 'Fen', 'Gal', 'Hes', 'Ivo', 'Kas', 'Lor', 'Mir', 'Nav', 'Orv', 'Pra', 'Sar', 'Tor', 'Val', 'Zel', 'Ara', 'Tem', 'Rho'];
+const SYL_B = ['ania', 'oria', 'heim', 'stan', 'mark', 'land', 'vania', 'gard', 'dor', 'ica', 'esia', 'onia', 'ara', 'avia', 'mere', 'fell', 'holm', 'aine', 'uri', 'eth', 'ovar', 'ennia', 'ador', 'ista', 'yne'];
+const PREFIX = ['', '', '', '', 'Republic of ', 'Kingdom of ', 'United ', 'Free ', 'Empire of ', 'Grand '];
+const TRIBE_A = ['Ka', 'Mo', 'Tu', 'Ri', 'Na', 'Lo', 'Shi', 'Ba', 'Ze', 'Wa', 'Ko', 'Am', 'Ul', 'Te', 'Yo', 'Ha', 'Pe', 'Su', 'Di', 'Ro'];
+const TRIBE_B = ['ruk', 'lan', 'tok', 'mira', 'zul', 'pa', 'nok', 'ri', 'ta', 'ken', 'wo', 'sha', 'dar', 'lu', 'mek', 'ga', 'nis', 'bo'];
+
+function hsl(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+// ---------- the game ----------
+class Game {
+  constructor(opts = {}) {
+    this.opts = opts;
+    this.seed = (opts.seed ?? Math.floor(Math.random() * 2 ** 31)) >>> 0;
+    this.rng = mulberry32(this.seed);
+    this.M = getMap();
+    this.diffKey = opts.difficulty || 'standard';
+    this.diff = DIFFS[this.diffKey];
+    this.owner = new Uint16Array(N);
+    this.borderPos = new Int32Array(N).fill(-1);
+    this.fallout = new Uint8Array(N); this.falloutList = []; this.falloutCount = 0;
+    this.dirty = []; this.dirtyFlag = new Uint8Array(N);
+    this.visit = new Uint32Array(N); this.stamp = 1; this.prev = new Int32Array(N); this.queue = new Int32Array(N);
+    this.nbA = new Int32Array(4); this.nbB = new Int32Array(4); this.nbC = new Int32Array(4);
+    this.players = [null]; this.buildings = []; this.buildingAt = new Map();
+    this.attacks = []; this.ships = []; this.nukes = []; this.effects = []; this.events = [];
+    this.tick = 0; this.phase = 'spawn'; this.protectUntil = 0; this.nextId = 1;
+    this.stats = { nukes: 0, intercepts: 0, boats: 0 };
+    this.makePlayers(opts.nations ?? 87, opts.tribes ?? 400, opts.playerName || 'You');
+  }
+
+  // ---- players ----
+  newPlayer(type, name, color) {
+    const p = {
+      id: this.players.length, type, name, color, troops: type === 'human' ? 1200 : type === 'nation' ? 1200 : 500,
+      gold: type === 'human' ? 1500 : 1000, tiles: 0, border: [], alive: true, spawned: false, capital: -1,
+      count: { city: 0, factory: 0, port: 0, defense: 0, silo: 0, sam: 0 }, blds: [],
+      allies: new Map(), grudge: new Map(), lastAllyAsk: -1e9,
+      ai: { threshold: 0.35 + this.rng() * 0.35, pct: 0.2 + this.rng() * 0.25, every: type === 'tribe' ? 25 + ((this.rng() * 15) | 0) : this.diff.think + ((this.rng() * 5) | 0) },
+    };
+    this.players.push(p); return p;
+  }
+  makePlayers(nNations, nTribes, playerName) {
+    const r = this.rng;
+    this.human = this.newPlayer('human', playerName, [255, 196, 20]);
+    const used = new Set();
+    for (let i = 0; i < nNations; i++) {
+      let name, g = 0;
+      do { name = PREFIX[(r() * PREFIX.length) | 0] + SYL_A[(r() * SYL_A.length) | 0] + SYL_B[(r() * SYL_B.length) | 0]; } while (used.has(name) && ++g < 50);
+      used.add(name);
+      let hue = (i * 137.508 + 20) % 360; if (hue > 190 && hue < 235) hue = (hue - 190) * 0.4 + 250; if (hue > 38 && hue < 58) hue -= 20;
+      this.newPlayer('nation', name, hsl(hue, 55 + r() * 30, 42 + r() * 18));
+    }
+    for (let i = 0; i < nTribes; i++) {
+      let name, g = 0;
+      do { name = TRIBE_A[(r() * TRIBE_A.length) | 0] + TRIBE_B[(r() * TRIBE_B.length) | 0] + (r() < 0.3 ? TRIBE_B[(r() * TRIBE_B.length) | 0] : ''); } while (used.has(name) && ++g < 50);
+      used.add(name);
+      let th = r() * 300; if (th > 190) th += 50; this.newPlayer('tribe', name[0].toUpperCase() + name.slice(1), hsl(th, 18 + r() * 22, 48 + r() * 18));
+    }
+    // AI spawns
+    const spawns = [];
+    const M = this.M;
+    for (const p of this.players) {
+      if (!p || p.type === 'human') continue;
+      const minD = p.type === 'nation' ? 34 : 12;
+      let best = -1;
+      for (let tries = 0; tries < 400; tries++) {
+        const t = (r() * N) | 0;
+        if (!M.land[t] || this.owner[t] || M.massSize[M.mass[t]] < 60) continue;
+        const x = t % W, y = (t / W) | 0;
+        let ok = true;
+        const md = tries < 250 ? minD : minD / 2;
+        for (const s of spawns) { const dx = s[0] - x, dy = s[1] - y; if (dx * dx + dy * dy < md * md) { ok = false; break; } }
+        if (ok) { best = t; break; }
+      }
+      if (best >= 0) { spawns.push([best % W, (best / W) | 0]); this.spawnAt(p, best, p.type === 'nation' ? 3 : 2); }
+      else p.alive = false;
+    }
+  }
+  spawnAt(p, t, rad) {
+    const cx = t % W, cy = (t / W) | 0;
+    for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+      if (dx * dx + dy * dy > rad * rad + 1) continue;
+      const x = cx + dx, y = cy + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const k = y * W + x; if (this.M.land[k] && !this.owner[k]) this.setOwner(k, p.id);
+    }
+    p.spawned = true; p.capital = t;
+  }
+  // human chooses spawn. returns error string or null
+  placeHuman(t) {
+    const M = this.M;
+    if (t < 0 || t >= N || !M.land[t]) return 'Pick a spot on land.';
+    if (this.owner[t]) return 'That land is taken. Pick unclaimed land.';
+    if (M.massSize[M.mass[t]] < 30) return 'That island is too small.';
+    this.spawnAt(this.human, t, 4);
+    this.phase = 'play';
+    this.protectUntil = this.tick + this.diff.protect * TPS;
+    return null;
+  }
+  isProtected(p) { return p.type === 'human' && this.tick < this.protectUntil; }
+  allied(a, b) { return a !== 0 && b !== 0 && this.players[a].allies.has(b); }
+  cap(p) { return 2000 + 60 * Math.pow(p.tiles, 0.8) + p.count.city * 15000; }
+  goldRate(p) { return (1 + Math.sqrt(p.tiles) * 0.12 + p.count.factory * 4) * TPS; } // per second
+
+  // ---- tiles ----
+  nbrs(t, b) {
+    let n = 0; const x = t % W;
+    if (x > 0) b[n++] = t - 1;
+    if (x < W - 1) b[n++] = t + 1;
+    if (t >= W) b[n++] = t - W;
+    if (t < N - W) b[n++] = t + W;
+    return n;
+  }
+  markDirty(t) { if (!this.dirtyFlag[t]) { this.dirtyFlag[t] = 1; this.dirty.push(t); } }
+  removeBorder(t, p) {
+    const arr = p.border, i = this.borderPos[t], last = arr.pop();
+    if (last !== t) { arr[i] = last; this.borderPos[last] = i; }
+    this.borderPos[t] = -1;
+  }
+  updBorder(t) {
+    const o = this.owner[t];
+    if (!o) return;
+    const land = this.M.land, b = this.nbC, n = this.nbrs(t, b);
+    let isB = false;
+    for (let i = 0; i < n; i++) { const k = b[i]; if (land[k] && this.owner[k] !== o) { isB = true; break; } }
+    const was = this.borderPos[t] >= 0;
+    if (isB && !was) { const p = this.players[o]; this.borderPos[t] = p.border.length; p.border.push(t); this.markDirty(t); }
+    else if (!isB && was) { this.removeBorder(t, this.players[o]); this.markDirty(t); }
+  }
+  setOwner(t, o) {
+    const old = this.owner[t];
+    if (old === o) return;
+    if (old) {
+      const op = this.players[old]; op.tiles--;
+      if (this.borderPos[t] >= 0) this.removeBorder(t, op);
+      if (op.tiles <= 0 && op.alive) this.eliminate(op);
+    }
+    this.owner[t] = o;
+    if (o) this.players[o].tiles++;
+    if (this.fallout[t] && o) { this.fallout[t] = 0; this.falloutCount--; }
+    const bl = this.buildingAt.get(t);
+    if (bl) { if (o) this.transferBuilding(bl, o); else this.destroyBuilding(bl); }
+    this.markDirty(t);
+    this.updBorder(t);
+    const b = this.nbB, n = this.nbrs(t, b);
+    for (let i = 0; i < n; i++) this.updBorder(b[i]);
+  }
+  eliminate(p) {
+    p.alive = false; p.troops = 0;
+    for (const a of this.attacks) if (a.att === p.id) a.done = true;
+    for (const s of this.ships) if (s.owner === p.id) s.done = true;
+    for (const q of this.players) if (q) { q.allies.delete(p.id); }
+    p.allies.clear();
+    this.events.push({ type: 'eliminated', id: p.id });
+  }
+
+  // ---- buildings ----
+  buildCost(p, type) { return Math.round(BUILDINGS[type].cost * Math.min(4, 1 + 0.5 * p.count[type])); }
+  canBuild(p, type, t) {
+    if (t < 0 || t >= N || this.owner[t] !== p.id) return 'Build inside your own territory.';
+    if (type === 'port' && !this.M.coastal[t]) return 'Ports must be on the coast.';
+    if (p.gold < this.buildCost(p, type)) return 'Not enough gold.';
+    const x = t % W, y = (t / W) | 0;
+    for (const b of p.blds) { const dx = b.x - x, dy = b.y - y; if (dx * dx + dy * dy < 9) return 'Too close to another building.'; }
+    return null;
+  }
+  build(p, type, t) {
+    const err = this.canBuild(p, type, t); if (err) return err;
+    p.gold -= this.buildCost(p, type);
+    const b = { id: this.nextId++, type, tile: t, x: t % W, y: (t / W) | 0, owner: p.id, cd: 0 };
+    this.buildings.push(b); this.buildingAt.set(t, b); p.blds.push(b); p.count[type]++;
+    return null;
+  }
+  transferBuilding(b, o) {
+    const op = this.players[b.owner]; const i = op.blds.indexOf(b); if (i >= 0) op.blds.splice(i, 1); op.count[b.type]--;
+    b.owner = o; const np = this.players[o]; np.blds.push(b); np.count[b.type]++;
+  }
+  destroyBuilding(b) {
+    const op = this.players[b.owner]; const i = op.blds.indexOf(b); if (i >= 0) op.blds.splice(i, 1); op.count[b.type]--;
+    this.buildingAt.delete(b.tile); b.dead = true;
+    const j = this.buildings.indexOf(b); if (j >= 0) this.buildings.splice(j, 1);
+  }
+  defenseNear(pid, t) {
+    const p = this.players[pid]; if (!p.count.defense) return false;
+    const x = t % W, y = (t / W) | 0;
+    for (const b of p.blds) if (b.type === 'defense') { const dx = b.x - x, dy = b.y - y; if (dx * dx + dy * dy <= DEF_RANGE * DEF_RANGE) return true; }
+    return false;
+  }
+
+  // ---- attacks ----
+  findAttack(a, tgt) { for (const x of this.attacks) if (!x.done && x.att === a && x.tgt === tgt) return x; return null; }
+  canAttack(a, tgt) {
+    if (tgt === a) return false;
+    if (tgt === 0) return true;
+    const T = this.players[tgt];
+    if (!T || !T.alive) return false;
+    if (this.allied(a, tgt)) return false;
+    if (a !== this.human.id && this.isProtected(T)) return false;
+    return true;
+  }
+  addCands(at, t) {
+    const land = this.M.land, b = this.nbA, n = this.nbrs(t, b);
+    for (let i = 0; i < n; i++) { const k = b[i]; if (land[k] && this.owner[k] === at.tgt && !at.set.has(k)) { at.set.add(k); at.cand.push(k); } }
+  }
+  // returns true if the attack has a frontier
+  startAttack(aid, tgt, troops, seedTile = -1) {
+    const A = this.players[aid];
+    if (!A.alive || !this.canAttack(aid, tgt)) return false;
+    troops = Math.min(troops, A.troops);
+    if (troops < 1) return false;
+    let at = this.findAttack(aid, tgt);
+    const isNew = !at;
+    if (isNew) at = { att: aid, tgt, troops: 0, cand: [], set: new Set(), done: false };
+    const before = at.cand.length;
+    if (seedTile >= 0) this.addCands(at, seedTile);
+    else for (let i = 0; i < A.border.length; i++) this.addCands(at, A.border[i]);
+    if (isNew && at.cand.length === 0) return false;
+    if (!isNew && at.cand.length === before && seedTile < 0 && at.cand.length === 0) return false;
+    A.troops -= troops; at.troops += troops;
+    if (isNew) this.attacks.push(at);
+    if (tgt) {
+      const T = this.players[tgt];
+      T.grudge.set(aid, this.tick);
+      // opposing attacks cancel out
+      const opp = this.findAttack(tgt, aid);
+      if (opp) { const m = Math.min(opp.troops, at.troops); opp.troops -= m; at.troops -= m; }
+      if (tgt === this.human.id && A.type !== 'human' && isNew) this.events.push({ type: 'attacked', id: aid });
+    }
+    return true;
+  }
+  tileCost(at, t) {
+    let m = TERR_MULT[this.M.terr[t]];
+    if (this.fallout[t]) m *= 2.5;
+    if (at.tgt === 0) return 2 * m;
+    const D = this.players[at.tgt];
+    const dens = D.troops / Math.max(1, D.tiles);
+    let c = (1.5 + dens * 0.9) * m;
+    if (this.defenseNear(at.tgt, t)) c *= 3;
+    return c;
+  }
+  attNeighbors(t, a) {
+    const b = this.nbA, n = this.nbrs(t, b); let c = 0;
+    for (let i = 0; i < n; i++) if (this.owner[b[i]] === a) c++;
+    return c;
+  }
+  processAttacks() {
+    const r = this.rng;
+    for (const at of this.attacks) {
+      if (at.done) continue;
+      const A = this.players[at.att];
+      if (!A.alive) { at.done = true; continue; }
+      if (at.tgt && (!this.players[at.tgt].alive || this.allied(at.att, at.tgt) || (A.type !== 'human' && this.isProtected(this.players[at.tgt])))) { this.endAttack(at); continue; }
+      const cand = at.cand;
+      let steps = Math.min(cand.length, Math.max(3, Math.ceil(Math.sqrt(cand.length) * 2 + cand.length * 0.03)));
+      while (steps-- > 0 && cand.length > 0) {
+        // pick the better of two random frontier tiles (fills gaps -> smooth fronts)
+        let i = (r() * cand.length) | 0;
+        const j = (r() * cand.length) | 0;
+        if (j !== i && this.attNeighbors(cand[j], at.att) > this.attNeighbors(cand[i], at.att)) i = j;
+        const t = cand[i]; const last = cand.pop(); if (i < cand.length) cand[i] = last;
+        at.set.delete(t);
+        if (this.owner[t] !== at.tgt || !this.attNeighbors(t, at.att)) continue;
+        const cost = this.tileCost(at, t);
+        if (at.troops < cost) { at.troops = 0; break; }
+        at.troops -= cost;
+        if (at.tgt) { const D = this.players[at.tgt]; const dens = D.troops / Math.max(1, D.tiles); D.troops = Math.max(0, D.troops - dens - 0.5); }
+        this.setOwner(t, at.att);
+        this.addCands(at, t);
+      }
+      if (at.troops < 1 || cand.length === 0) this.endAttack(at);
+    }
+    if (this.tick % 5 === 0) this.attacks = this.attacks.filter(a => !a.done);
+  }
+  endAttack(at) {
+    if (at.done) return;
+    at.done = true;
+    const A = this.players[at.att];
+    if (A.alive) A.troops += Math.max(0, at.troops);
+    at.troops = 0;
+  }
+
+  // ---- boats ----
+  // find a coastal landing tile near t on the same landmass
+  landingNear(t) {
+    const M = this.M; if (!M.land[t]) return -1;
+    if (M.coastal[t]) return t;
+    const st = ++this.stamp, q = this.queue; let h = 0, tl = 0; q[tl++] = t; this.visit[t] = st;
+    const b = this.nbA;
+    while (h < tl && tl < 40000) {
+      const c = q[h++]; if (M.coastal[c]) return c;
+      const n = this.nbrs(c, b);
+      for (let i = 0; i < n; i++) { const k = b[i]; if (M.land[k] && this.visit[k] !== st) { this.visit[k] = st; q[tl++] = k; } }
+    }
+    return -1;
+  }
+  isPortTile(t, pid) { const b = this.buildingAt.get(t); return !!b && b.type === 'port' && b.owner === pid; }
+  // water path from one of pid's ports to landing tile L. returns Int32Array path of tiles (port -> water... -> L) or null
+  boatPath(pid, L, maxNodes = 700000) {
+    const M = this.M, st = ++this.stamp, q = this.queue, prev = this.prev, land = M.land;
+    let h = 0, tl = 0; const b = this.nbA, b2 = this.nbB;
+    let n = this.nbrs(L, b);
+    for (let i = 0; i < n; i++) { const k = b[i]; if (!land[k]) { this.visit[k] = st; prev[k] = L; q[tl++] = k; } }
+    while (h < tl && tl < maxNodes) {
+      const c = q[h++];
+      n = this.nbrs(c, b);
+      for (let i = 0; i < n; i++) {
+        const k = b[i];
+        if (land[k]) {
+          if (this.owner[k] === pid && this.isPortTile(k, pid)) {
+            const path = [k]; let x = c; while (x !== L) { path.push(x); x = prev[x]; } path.push(L);
+            return Int32Array.from(path);
+          }
+          continue;
+        }
+        if (this.visit[k] !== st) { this.visit[k] = st; prev[k] = c; q[tl++] = k; }
+      }
+    }
+    return null;
+  }
+  // returns error string or null
+  launchBoat(pid, targetTile, troops, maxNodes = 700000) {
+    const P = this.players[pid];
+    if (!P.count.port) return 'You need a Port to invade across water.';
+    const L = this.landingNear(targetTile);
+    if (L < 0) return 'No coast to land on near there.';
+    const tgt = this.owner[L];
+    if (tgt === pid) return 'You already own that coast.';
+    if (!this.canAttack(pid, tgt)) return tgt && this.allied(pid, tgt) ? 'You are allied with them.' : 'They are protected right now.';
+    troops = Math.min(troops, P.troops); if (troops < 1) return 'Not enough troops.';
+    const path = this.boatPath(pid, L, maxNodes);
+    if (!path) return 'No sea route from your ports.';
+    P.troops -= troops;
+    this.ships.push({ owner: pid, troops, path, pos: 0, L, done: false });
+    this.stats.boats++;
+    if (tgt === this.human.id) this.events.push({ type: 'boat', id: pid });
+    return null;
+  }
+  processShips() {
+    for (const s of this.ships) {
+      if (s.done) continue;
+      s.pos += 1.6;
+      if (s.pos >= s.path.length - 1) {
+        s.done = true;
+        const P = this.players[s.owner]; if (!P.alive) continue;
+        const L = s.L, tgt = this.owner[L];
+        if (tgt === s.owner || !this.canAttack(s.owner, tgt)) { P.troops += s.troops; continue; }
+        const cost = this.tileCost({ tgt }, L);
+        if (s.troops <= cost) continue;
+        if (tgt) { const D = this.players[tgt]; D.grudge.set(s.owner, this.tick); }
+        this.setOwner(L, s.owner);
+        P.troops += s.troops - cost;
+        this.startAttack(s.owner, tgt, s.troops - cost, L);
+      }
+    }
+    if (this.tick % 10 === 0) this.ships = this.ships.filter(s => !s.done);
+  }
+
+  // ---- nukes ----
+  launchNuke(pid, type, target) {
+    const P = this.players[pid], spec = NUKES[type];
+    if (!P.count.silo) return 'You need a Missile Silo.';
+    if (P.gold < spec.cost) return 'Not enough gold.';
+    if (target < 0 || target >= N) return 'Bad target.';
+    const tx = target % W, ty = (target / W) | 0;
+    let silo = null, bd = Infinity;
+    for (const b of P.blds) if (b.type === 'silo' && b.cd <= this.tick) { const d = (b.x - tx) ** 2 + (b.y - ty) ** 2; if (d < bd) { bd = d; silo = b; } }
+    if (!silo) return 'Silo is reloading.';
+    P.gold -= spec.cost; silo.cd = this.tick + 100;
+    const dist = Math.sqrt(bd), dur = Math.max(25, Math.round(dist / 3));
+    let interceptAt = -1;
+    for (const b of this.buildings) {
+      if (b.type !== 'sam' || b.owner === pid || this.allied(b.owner, pid) || b.cd > this.tick) continue;
+      const d = (b.x - tx) ** 2 + (b.y - ty) ** 2;
+      if (d <= SAM_RANGE * SAM_RANGE) { b.cd = this.tick + 60; if (this.rng() < 0.75) { interceptAt = this.tick + Math.round(dur * 0.85); this.interceptSam = b; } break; }
+    }
+    const victim = this.owner[target];
+    // nuking breaks alliances with the victim
+    if (victim && victim !== pid) { this.breakAlliance(pid, victim); this.players[victim].grudge.set(pid, this.tick + 3000); }
+    this.nukes.push({ owner: pid, type, sx: silo.x, sy: silo.y, tx, ty, t0: this.tick, t1: this.tick + dur, interceptAt, target });
+    this.stats.nukes++;
+    if (victim === this.human.id && pid !== victim) this.events.push({ type: 'nuke', id: pid });
+    return null;
+  }
+  processNukes() {
+    for (const n of this.nukes) {
+      if (n.done) continue;
+      if (n.interceptAt >= 0 && this.tick >= n.interceptAt) {
+        n.done = true; this.stats.intercepts++;
+        const f = (n.interceptAt - n.t0) / (n.t1 - n.t0);
+        this.effects.push({ kind: 'intercept', x: n.sx + (n.tx - n.sx) * f, y: n.sy + (n.ty - n.sy) * f, r: 6, t0: this.tick, dur: 15 });
+        continue;
+      }
+      if (this.tick >= n.t1) { n.done = true; this.detonate(n); }
+    }
+    if (this.tick % 10 === 0) this.nukes = this.nukes.filter(n => !n.done);
+    this.effects = this.effects.filter(e => this.tick < e.t0 + e.dur);
+  }
+  detonate(n) {
+    const R = NUKES[n.type].radius, M = this.M;
+    this.effects.push({ kind: 'blast', x: n.tx, y: n.ty, r: R, t0: this.tick, dur: 25 });
+    const hit = new Set();
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const d2 = dx * dx + dy * dy; if (d2 > R * R) continue;
+      const x = n.tx + dx, y = n.ty + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const t = y * W + x; if (!M.land[t]) continue;
+      // outer ring has a chance to survive
+      if (d2 > R * R * 0.6 && this.rng() < 0.4) continue;
+      const o = this.owner[t];
+      if (o) { const p = this.players[o]; p.troops -= p.troops / Math.max(1, p.tiles) * 1.5; if (p.troops < 0) p.troops = 0; hit.add(o); this.setOwner(t, 0); }
+      const bl = this.buildingAt.get(t); if (bl) this.destroyBuilding(bl);
+      if (!this.fallout[t]) { this.falloutCount++; this.falloutList.push(t); }
+      this.fallout[t] = FALLOUT; this.markDirty(t);
+    }
+    for (const o of hit) if (o !== n.owner) this.players[o].grudge.set(n.owner, this.tick + 3000);
+  }
+  processFallout() {
+    const f = this.fallout; let w = 0; const L = this.falloutList;
+    for (let i = 0; i < L.length; i++) {
+      const t = L[i]; if (!f[t]) continue;
+      if (--f[t] === 0) { this.falloutCount--; this.markDirty(t); continue; }
+      L[w++] = t;
+    }
+    L.length = w;
+  }
+
+  // ---- alliances ----
+  makeAlliance(a, b) {
+    const until = this.tick + 300 * TPS;
+    this.players[a].allies.set(b, until); this.players[b].allies.set(a, until);
+    for (const at of this.attacks) if (!at.done && ((at.att === a && at.tgt === b) || (at.att === b && at.tgt === a))) this.endAttack(at);
+  }
+  breakAlliance(a, b) {
+    const A = this.players[a], B = this.players[b];
+    if (A.allies.has(b)) { A.allies.delete(b); B.allies.delete(a); B.grudge.set(a, this.tick + 1500); if (a === this.human.id || b === this.human.id) this.events.push({ type: 'allyBroken', id: a === this.human.id ? b : a }); }
+  }
+  // human asks an AI for alliance -> returns true/false
+  requestAlliance(aid) {
+    const H = this.human, A = this.players[aid];
+    if (!A || !A.alive || A.type === 'human') return false;
+    if (H.allies.has(aid)) return true;
+    const g = A.grudge.get(H.id);
+    const angry = g !== undefined && this.tick - g < 1200;
+    const ok = !angry && (A.type === 'tribe' ? this.rng() < 0.5 : (H.tiles > A.tiles * 0.4 && this.rng() < 0.7));
+    if (ok) this.makeAlliance(H.id, aid);
+    return ok;
+  }
+
+  // ---- AI ----
+  scanNeighbors(p, samples = 30) {
+    const res = { neutral: 0, players: new Map() };
+    const B = p.border; if (!B.length) return res;
+    const land = this.M.land, b = this.nbA, r = this.rng;
+    const k = Math.min(samples, B.length);
+    for (let s = 0; s < k; s++) {
+      const t = B[(r() * B.length) | 0], n = this.nbrs(t, b);
+      for (let i = 0; i < n; i++) {
+        const q = b[i]; if (!land[q]) continue;
+        const o = this.owner[q]; if (o === p.id) continue;
+        if (o === 0) res.neutral++; else res.players.set(o, (res.players.get(o) || 0) + 1);
+      }
+    }
+    return res;
+  }
+  ai(p) {
+    const r = this.rng, d = this.diff, cap = this.cap(p);
+    if (p.type === 'nation') {
+      if (r() < 0.35) this.aiBuild(p);
+      if (d.nukes && this.tick > d.nukeTick && p.count.silo && r() < 0.08) this.aiNuke(p);
+    }
+    if (p.troops < cap * p.ai.threshold) return;
+    const info = this.scanNeighbors(p);
+    const pct = p.ai.pct;
+    // alliance offers to the human
+    if (p.type === 'nation' && info.players.has(this.human.id) && !p.allies.has(this.human.id) && this.tick - p.lastAllyAsk > 1800 && r() < 0.02) {
+      const g = p.grudge.get(this.human.id);
+      if (g === undefined || this.tick - g > 1500) { p.lastAllyAsk = this.tick; this.events.push({ type: 'allyRequest', id: p.id }); }
+    }
+    if (info.neutral > 0 && (info.players.size === 0 || r() < 0.75)) { this.startAttack(p.id, 0, p.troops * pct); return; }
+    let best = 0, bestS = 0;
+    const pd = p.troops / Math.max(1, p.tiles);
+    for (const [id, cnt] of info.players) {
+      const q = this.players[id];
+      if (!this.canAttack(p.id, id)) continue;
+      const qd = q.troops / Math.max(1, q.tiles);
+      let s = cnt * (pd + 1) / (qd + 1) * (0.6 + r() * 0.8);
+      if (q.type === 'tribe') s *= 1.6;
+      if (q.type === 'human') s *= d.humanBias;
+      const g = p.grudge.get(id); if (g !== undefined && this.tick - g < 1200) s *= 2;
+      if (s > bestS) { bestS = s; best = id; }
+    }
+    if (best) {
+      const q = this.players[best];
+      if (p.troops * pct > q.troops * 0.3 || r() < d.aggr) { this.startAttack(p.id, best, p.troops * (pct + 0.1)); return; }
+    }
+    if (p.type === 'nation' && info.neutral === 0 && (info.players.size === 0 || r() < 0.15)) {
+      if (p.count.port) { if (r() < 0.4) this.aiBoat(p); }
+      else if (info.players.size === 0) this.aiBuild(p, 'port');
+    }
+  }
+  aiBoat(p) {
+    const r = this.rng, CL = this.M.coastList;
+    const port = p.blds.find(b => b.type === 'port'); if (!port) return;
+    let best = -1, bd = Infinity;
+    for (let i = 0; i < 40; i++) {
+      const t = CL[(r() * CL.length) | 0], o = this.owner[t];
+      if (o === p.id || !this.canAttack(p.id, o)) continue;
+      const d = (t % W - port.x) ** 2 + (((t / W) | 0) - port.y) ** 2;
+      if (d < bd) { bd = d; best = t; }
+    }
+    if (best >= 0) this.launchBoat(p.id, best, p.troops * 0.35, 250000);
+  }
+  findSite(p, type) {
+    const B = p.border; if (!B.length) return -1;
+    const M = this.M, st = ++this.stamp, q = this.queue, b = this.nbA;
+    const start = B[(this.rng() * B.length) | 0];
+    let h = 0, tl = 0; q[tl++] = start; this.visit[start] = st;
+    let found = -1;
+    while (h < tl && tl < 600) {
+      const c = q[h++];
+      if (type === 'port' ? M.coastal[c] : type === 'defense' ? h < 40 : h > tl * 0.6) {
+        if (!this.canBuild(p, type, c)) { found = c; if (type !== 'city' && type !== 'silo' && type !== 'sam' && type !== 'factory') break; }
+      }
+      const n = this.nbrs(c, b);
+      for (let i = 0; i < n; i++) { const k = b[i]; if (this.owner[k] === p.id && this.visit[k] !== st) { this.visit[k] = st; q[tl++] = k; } }
+    }
+    return found;
+  }
+  aiBuild(p, force) {
+    const r = this.rng, c = p.count, d = this.diff;
+    let type = force;
+    if (!type) {
+      const opts = [];
+      if (!c.port && p.tiles > 150) opts.push('port', 'port');
+      opts.push('city', 'city', 'factory', 'factory');
+      if (p.tiles > 400) opts.push('defense');
+      if (d.nukes && this.tick > d.nukeTick * 0.6 && !c.silo && p.tiles > 1500) opts.push('silo', 'silo');
+      if (this.tick > d.nukeTick * 0.6 && c.sam < 1 + (c.city >> 2) && p.tiles > 1200) opts.push('sam');
+      type = opts[(r() * opts.length) | 0];
+    }
+    if (p.gold < this.buildCost(p, type)) return;
+    const t = this.findSite(p, type);
+    if (t >= 0) this.build(p, type, t);
+  }
+  aiNuke(p) {
+    const r = this.rng;
+    let target = null, bs = 0;
+    for (const [id, g] of p.grudge) {
+      const q = this.players[id]; if (!q || !q.alive || this.allied(p.id, id) || this.isProtected(q)) continue;
+      const s = q.tiles * (this.tick - g < 2000 ? 2 : 0.5) * (q.type === 'tribe' ? 0.1 : 1) * (q.type === 'human' ? this.diff.humanBias : 1);
+      if (s > bs) { bs = s; target = q; }
+    }
+    if (!target || target.tiles < 300) return;
+    const type = p.gold > NUKES.hydrogen.cost * 1.3 && r() < 0.4 ? 'hydrogen' : 'atom';
+    if (p.gold < NUKES[type].cost * 1.2) return;
+    const city = target.blds.find(b => b.type === 'city' || b.type === 'silo');
+    const t = city ? city.tile : target.border[(r() * target.border.length) | 0];
+    if (t !== undefined) this.launchNuke(p.id, type, t);
+  }
+
+  // ---- main tick ----
+  step() {
+    if (this.phase !== 'play' && !(this.result && this.spectate)) return;
+    this.tick++;
+    const d = this.diff;
+    for (let i = 1; i < this.players.length; i++) {
+      const p = this.players[i]; if (!p.alive || !p.spawned) continue;
+      const cap = this.cap(p);
+      const mult = p.type === 'human' ? 1 : d.regen;
+      if (p.troops < cap) p.troops += (3 + Math.pow(p.troops, 0.7) / 10) * (1 - p.troops / cap) * mult;
+      else p.troops -= (p.troops - cap) * 0.01;
+      p.gold += this.goldRate(p) / TPS * (p.type === 'human' ? 1 : d.regen);
+    }
+    this.processAttacks();
+    this.processShips();
+    this.processNukes();
+    if (this.tick % 10 === 0) this.processFallout();
+    for (let i = 2; i < this.players.length; i++) {
+      const p = this.players[i];
+      if (p.alive && (this.tick + i) % p.ai.every === 0) this.ai(p);
+    }
+    if (this.tick % 10 === 0) {
+      for (const p of this.players) if (p && p.alive) for (const [id, until] of p.allies) if (this.tick >= until) {
+        p.allies.delete(id); if (p.id === this.human.id) this.events.push({ type: 'allyExpired', id });
+      }
+      const H = this.human;
+      if (!this.result) {
+        if (!H.alive || H.tiles <= 0) this.result = 'lost';
+        else if (this.landPct(H) >= 80 || !this.players.some(p => p && p.alive && p.type === 'nation')) this.result = 'won';
+        if (this.result) { this.phase = this.result; this.events.push({ type: this.result }); }
+      }
+    }
+  }
+  landPct(p) { return p.tiles / Math.max(1, this.M.landCount - this.falloutCount) * 100; }
+  leaderboard(n = 10) {
+    return this.players.filter(p => p && p.alive && p.spawned).sort((a, b) => b.tiles - a.tiles).slice(0, n);
+  }
+}
+
+// Frontline Conquest - canvas renderer
+
+const pack = (r, g, b) => (255 << 24 | b << 16 | g << 8 | r) >>> 0;
+const CS = 4, CW = Math.ceil(W / CS), CH = Math.ceil(H / CS);
+const BAND = 32;
+
+function fmt(n) {
+  n = Math.max(0, n);
+  if (n < 1000) return String(Math.floor(n));
+  if (n < 1e6) return (n / 1e3).toFixed(n < 1e4 ? 1 : 0) + 'K';
+  return (n / 1e6).toFixed(n < 1e7 ? 2 : 1) + 'M';
+}
+
+let BASE = null;
+function buildBase(M) {
+  if (BASE) return BASE;
+  const base = new Uint32Array(N), fall = new Uint32Array(N);
+  for (let t = 0; t < N; t++) {
+    const y = (t / W) | 0;
+    let r, g, b;
+    if (!M.land[t]) {
+      const d = Math.min(M.dist[t], 14) / 14, dd = Math.sqrt(d);
+      r = 44 - dd * 20; g = 104 - dd * 44; b = 156 - dd * 38;
+      if (M.dist[t] === 0) { r += 14; g += 18; b += 14; }
+    } else {
+      const lat = 80 - y / H * 138, e = M.elev[t], al = Math.abs(lat), x = t % W;
+      const wob = Math.sin(x * 0.045 + y * 0.02) * 4 + Math.sin(x * 0.013 - y * 0.05) * 5 + (e - 0.5) * 14;
+      const L = al + wob;
+      const sm = (a, b, v) => { const k = Math.max(0, Math.min(1, (v - a) / (b - a))); return k * k * (3 - 2 * k); };
+      // temperate green -> tropical green / dry tan / tundra, blended smoothly
+      let pr = 92, pg = 138, pb = 68;
+      const trop = 1 - sm(8, 16, L), dry = sm(14, 21, L) * (1 - sm(30, 38, L)) * (0.55 + 0.45 * sm(4, 30, M.dist[t] + wob)), cold = sm(52, 66, L);
+      pr += (58 - pr) * trop; pg += (124 - pg) * trop; pb += (54 - pb) * trop;
+      pr += (182 - pr) * dry; pg += (162 - pg) * dry; pb += (106 - pb) * dry;
+      pr += (156 - pr) * cold; pg += (162 - pg) * cold; pb += (146 - pb) * cold;
+      if (M.terr[t] === 1) { pr = pr * 0.7 + 120 * 0.3; pg = pg * 0.7 + 108 * 0.3; pb = pb * 0.7 + 80 * 0.3; }
+      if (M.terr[t] === 2) { pr = 124; pg = 114; pb = 102; if (e > 0.86 || (cold > 0.5 && e > 0.8)) { pr = 222; pg = 224; pb = 230; } }
+      const sh = 0.9 + (e - 0.5) * 0.35;
+      r = pr * sh; g = pg * sh; b = pb * sh;
+    }
+    base[t] = pack(r | 0, g | 0, b | 0);
+    const fr = M.land[t] ? 1 : 0;
+    fall[t] = pack((r * 0.35 + 90 * 0.65 * fr) | 0, (g * 0.35 + 110 * 0.65 * fr) | 0, (b * 0.35 + 40 * 0.65 * fr) | 0);
+  }
+  BASE = { base, fall };
+  return BASE;
+}
+
+class Renderer {
+  constructor(canvas) {
+    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: false });
+    this.map = document.createElement('canvas'); this.map.width = W; this.map.height = H;
+    this.mctx = this.map.getContext('2d');
+    this.img = this.mctx.createImageData(W, H);
+    this.buf = new Uint32Array(this.img.data.buffer);
+    this.cam = { x: 0, y: 0, z: 1 };
+    this.labels = []; this.lastLabels = 0;
+    this.cellOwner = new Uint16Array(CW * CH); this.cellDist = new Uint8Array(CW * CH); this.cq = new Int32Array(CW * CH);
+    this.bands = new Int32Array(Math.ceil(H / BAND) * 2);
+    this.pings = []; this.sprites = new Map(); this.mctxT = document.createElement('canvas').getContext('2d');
+    this.resize();
+  }
+  setGame(g) {
+    this.g = g; const B = buildBase(g.M); this.base = B.base; this.fall = B.fall;
+    const P = g.players;
+    this.pc = new Uint32Array(P.length); this.pb = new Uint32Array(P.length); this.prgb = [];
+    for (let i = 1; i < P.length; i++) {
+      const [r, gg, b] = P[i].color;
+      this.prgb[i] = P[i].color;
+      this.pc[i] = pack(r, gg, b);
+      this.pb[i] = P[i].type === 'human' ? pack(255, 255, 255) : pack((r * 0.55) | 0, (gg * 0.55) | 0, (b * 0.55) | 0);
+    }
+    for (let t = 0; t < N; t++) this.buf[t] = this.px(t);
+    g.dirty.length = 0; g.dirtyFlag.fill(0);
+    this.mctx.putImageData(this.img, 0, 0);
+    this.lastLabels = 0; this.sprites.clear();
+  }
+  px(t) {
+    const g = this.g, o = g.owner[t];
+    if (!o) return g.fallout[t] ? this.fall[t] : this.base[t];
+    if (g.borderPos[t] >= 0) return this.pb[o];
+    // interior: blend nation colour with terrain for texture
+    const c = this.pc[o], bs = this.base[t];
+    const r = ((c & 255) * 0.72 + (bs & 255) * 0.28) | 0, gg = (((c >> 8) & 255) * 0.72 + ((bs >> 8) & 255) * 0.28) | 0, b = (((c >> 16) & 255) * 0.72 + ((bs >> 16) & 255) * 0.28) | 0;
+    return pack(r, gg, b);
+  }
+  flush() {
+    const g = this.g, D = g.dirty; if (!D.length) return;
+    const bands = this.bands; bands.fill(-1);
+    for (let i = 0; i < D.length; i++) {
+      const t = D[i]; g.dirtyFlag[t] = 0; this.buf[t] = this.px(t);
+      const x = t % W, bi = (((t / W) | 0) / BAND | 0) * 2;
+      if (bands[bi] < 0 || x < bands[bi]) bands[bi] = x;
+      if (x > bands[bi + 1]) bands[bi + 1] = x;
+    }
+    D.length = 0;
+    for (let b = 0; b < bands.length; b += 2) if (bands[b] >= 0) {
+      const y0 = (b / 2) * BAND;
+      this.mctx.putImageData(this.img, 0, 0, bands[b], y0, bands[b + 1] - bands[b] + 1, Math.min(BAND, H - y0));
+    }
+  }
+  resize() {
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.sw = window.innerWidth; this.sh = window.innerHeight;
+    this.cv.width = Math.round(this.sw * this.dpr); this.cv.height = Math.round(this.sh * this.dpr);
+    this.cv.style.width = this.sw + 'px'; this.cv.style.height = this.sh + 'px';
+    this.minZ = Math.min(this.sw / W, this.sh / H) * 0.9;
+  }
+  fit() { const z = Math.max(this.sw / W, this.minZ / 0.9); this.cam.z = Math.min(z, this.sh / H * 1.6); this.cam.x = W / 2 - this.sw / 2 / this.cam.z; this.cam.y = H / 2 - this.sh / 2 / this.cam.z; this.clamp(); }
+  clamp() {
+    const c = this.cam; c.z = Math.max(this.minZ, Math.min(40, c.z));
+    const vw = this.sw / c.z, vh = this.sh / c.z;
+    c.x = vw > W ? (W - vw) / 2 : Math.max(-vw * 0.3, Math.min(W - vw * 0.7, c.x));
+    c.y = vh > H ? (H - vh) / 2 : Math.max(-vh * 0.3, Math.min(H - vh * 0.7, c.y));
+  }
+  toTile(sx, sy) {
+    const c = this.cam, x = Math.floor(c.x + sx / c.z), y = Math.floor(c.y + sy / c.z);
+    if (x < 0 || y < 0 || x >= W || y >= H) return -1;
+    return y * W + x;
+  }
+  zoomAt(sx, sy, f) {
+    const c = this.cam, wx = c.x + sx / c.z, wy = c.y + sy / c.z;
+    c.z *= f; this.clamp(); c.x = wx - sx / c.z; c.y = wy - sy / c.z; this.clamp();
+  }
+  centerOn(t, z) { const c = this.cam; if (z) c.z = z; c.x = t % W + 0.5 - this.sw / 2 / c.z; c.y = ((t / W) | 0) + 0.5 - this.sh / 2 / c.z; this.clamp(); }
+  ping(t, color) { this.pings.push({ x: t % W + 0.5, y: ((t / W) | 0) + 0.5, t0: performance.now(), color }); }
+
+  computeLabels() {
+    const g = this.g, own = g.owner, co = this.cellOwner, cd = this.cellDist, q = this.cq;
+    for (let cy = 0; cy < CH; cy++) for (let cx = 0; cx < CW; cx++) {
+      const x = Math.min(W - 1, cx * CS + 2), y = Math.min(H - 1, cy * CS + 2);
+      co[cy * CW + cx] = own[y * W + x];
+    }
+    let qt = 0;
+    for (let i = 0; i < co.length; i++) {
+      const o = co[i]; cd[i] = 0; if (!o) continue;
+      const x = i % CW, y = (i / CW) | 0;
+      if (x === 0 || y === 0 || x === CW - 1 || y === CH - 1 || co[i - 1] !== o || co[i + 1] !== o || co[i - CW] !== o || co[i + CW] !== o) { cd[i] = 1; q[qt++] = i; }
+    }
+    for (let h = 0; h < qt; h++) {
+      const i = q[h], d = cd[i] + 1, o = co[i];
+      const nb = [i - 1, i + 1, i - CW, i + CW];
+      for (const k of nb) if (k >= 0 && k < co.length && co[k] === o && cd[k] === 0) { cd[k] = d > 250 ? 250 : d; q[qt++] = k; }
+    }
+    const best = new Int32Array(g.players.length).fill(-1);
+    for (let i = 0; i < co.length; i++) { const o = co[i]; if (o && (best[o] < 0 || cd[i] > cd[best[o]])) best[o] = i; }
+    const labels = [];
+    for (let id = 1; id < g.players.length; id++) {
+      const p = g.players[id]; if (!p.alive || !p.tiles) continue;
+      let x, y, size;
+      if (best[id] >= 0) {
+        const i = best[id], d = cd[i];
+        x = (i % CW) * CS + CS / 2; y = ((i / CW) | 0) * CS + CS / 2;
+        size = Math.min(d * CS * 0.75, 3.2 * d * CS / Math.max(4, p.name.length));
+      } else {
+        const t = own[p.capital] === id ? p.capital : p.border[0]; if (t === undefined) continue;
+        x = t % W + 0.5; y = ((t / W) | 0) + 0.5; size = Math.max(1.2, Math.sqrt(p.tiles) * 0.35);
+      }
+      labels.push({ id, x, y, size, tr: fmt(p.troops) });
+    }
+    this.labels = labels;
+  }
+
+  // labels are pre-rendered into small canvases (cheap to blit every frame)
+  labelSprite(L, p, fs) {
+    const bucket = Math.round(Math.log(fs) / Math.log(1.18)), bf = Math.pow(1.18, bucket);
+    const ally = this.g.human.allies.has(p.id);
+    const key = bucket + '|' + L.tr + '|' + ally;
+    let s = this.sprites.get(L.id);
+    if (s && s.key === key) return s;
+    const d = this.dpr, name = p.type === 'human' ? '★ ' + p.name : p.name;
+    const f1 = `${p.type === 'human' ? '800' : '600'} ${bf * d}px system-ui,sans-serif`, f2s = Math.max(7, bf * 0.7) * d, f2 = `600 ${f2s}px system-ui,sans-serif`;
+    const m = this.mctxT; m.font = f1; const w1 = m.measureText(name).width; m.font = f2; const w2 = m.measureText(L.tr).width;
+    const pad = Math.max(2, bf / 6) * d, w = Math.ceil(Math.max(w1, w2) + pad * 2), h = Math.ceil(bf * d * 1.05 + f2s * 1.1 + pad * 2);
+    const c = s && s.c.width >= w && s.c.height >= h && s.c.width < w * 2 ? s.c : document.createElement('canvas');
+    if (c.width !== w) c.width = w; if (c.height !== h) c.height = h;
+    const x = c.getContext('2d'); x.clearRect(0, 0, w, h);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.strokeStyle = 'rgba(0,0,0,0.6)';
+    const y1 = pad + bf * d * 0.52, y2 = pad + bf * d * 1.05 + f2s * 0.55;
+    x.font = f1; x.lineWidth = Math.max(2, bf / 6) * d; x.strokeText(name, w / 2, y1); x.fillStyle = ally ? '#b8ffb8' : '#fff'; x.fillText(name, w / 2, y1);
+    x.font = f2; x.lineWidth = Math.max(2, f2s / 6); x.strokeText(L.tr, w / 2, y2); x.fillStyle = '#ffe9a8'; x.fillText(L.tr, w / 2, y2);
+    s = { key, c, w: w / d, h: h / d, fs: bf };
+    this.sprites.set(L.id, s);
+    return s;
+  }
+
+  draw(now) {
+    const g = this.g, ctx = this.ctx, c = this.cam, d = this.dpr;
+    this.flush();
+    if (now - this.lastLabels > 900) { this.computeLabels(); this.lastLabels = now; }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#0d2238'; ctx.fillRect(0, 0, this.cv.width, this.cv.height);
+    ctx.setTransform(c.z * d, 0, 0, c.z * d, -c.x * c.z * d, -c.y * c.z * d);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.map, 0, 0);
+    // world-space overlays
+    const vx0 = c.x - 2, vy0 = c.y - 2, vx1 = c.x + this.sw / c.z + 2, vy1 = c.y + this.sh / c.z + 2;
+    const inView = (x, y, m = 0) => x > vx0 - m && x < vx1 + m && y > vy0 - m && y < vy1 + m;
+    // nukes in flight
+    const tk = g.tick + (this.alpha || 0);
+    for (const n of g.nukes) {
+      if (n.done) continue;
+      const R = NUKES[n.type].radius;
+      ctx.lineWidth = Math.max(0.6, 2 / c.z);
+      ctx.strokeStyle = 'rgba(255,60,40,0.8)'; ctx.setLineDash([4 / c.z, 3 / c.z]);
+      ctx.beginPath(); ctx.arc(n.tx + 0.5, n.ty + 0.5, R, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      const f = Math.min(1, (tk - n.t0) / (n.t1 - n.t0));
+      const mx = (n.sx + n.tx) / 2, my = (n.sy + n.ty) / 2 - Math.hypot(n.tx - n.sx, n.ty - n.sy) * 0.35;
+      const bx = (1 - f) * (1 - f) * n.sx + 2 * (1 - f) * f * mx + f * f * n.tx, by = (1 - f) * (1 - f) * n.sy + 2 * (1 - f) * f * my + f * f * n.ty;
+      ctx.strokeStyle = 'rgba(255,200,120,0.35)'; ctx.beginPath(); ctx.moveTo(n.sx, n.sy); ctx.quadraticCurveTo(mx, my, n.tx, n.ty); ctx.stroke();
+      ctx.fillStyle = '#ffeb7a'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1.2, 5 / c.z), 0, Math.PI * 2); ctx.fill();
+    }
+    for (const e of g.effects) {
+      const f = (tk - e.t0) / e.dur; if (f < 0 || f > 1) continue;
+      ctx.fillStyle = e.kind === 'blast' ? `rgba(255,${(180 - f * 150) | 0},40,${0.75 * (1 - f)})` : `rgba(255,255,255,${0.9 * (1 - f)})`;
+      ctx.beginPath(); ctx.arc(e.x + 0.5, e.y + 0.5, e.r * (0.4 + f * 0.8), 0, Math.PI * 2); ctx.fill();
+    }
+    // ships
+    for (const s of g.ships) {
+      if (s.done) continue;
+      const i = Math.min(s.path.length - 1, Math.floor(s.pos)), t = s.path[i];
+      const x = t % W + 0.5, y = ((t / W) | 0) + 0.5; if (!inView(x, y)) continue;
+      const col = this.prgb[s.owner];
+      const r = Math.max(1.5, 6 / c.z);
+      ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(0.3, 1.5 / c.z);
+      ctx.beginPath(); ctx.moveTo(x - r, y - r * 0.3); ctx.lineTo(x + r, y - r * 0.3); ctx.lineTo(x + r * 0.6, y + r * 0.6); ctx.lineTo(x - r * 0.6, y + r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // pings
+    for (let i = this.pings.length - 1; i >= 0; i--) {
+      const p = this.pings[i], f = (now - p.t0) / 600; if (f > 1) { this.pings.splice(i, 1); continue; }
+      ctx.strokeStyle = p.color || 'rgba(255,255,255,' + (1 - f) + ')'; ctx.globalAlpha = 1 - f; ctx.lineWidth = 2 / c.z;
+      ctx.beginPath(); ctx.arc(p.x, p.y, (4 + f * 14) / c.z * 2, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    // screen-space: buildings + labels
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    const sx = x => (x - c.x) * c.z, sy = y => (y - c.y) * c.z;
+    if (c.z >= 1.1) {
+      const r = Math.min(11, 4 + c.z * 0.9);
+      ctx.font = `bold ${Math.round(r * 1.2)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const b of g.buildings) {
+        if (!inView(b.x, b.y)) continue;
+        const X = sx(b.x + 0.5), Y = sy(b.y + 0.5), col = this.prgb[b.owner];
+        ctx.fillStyle = `rgb(${col[0] * 0.6 | 0},${col[1] * 0.6 | 0},${col[2] * 0.6 | 0})`;
+        ctx.strokeStyle = b.owner === g.human.id ? '#fff' : 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (b.type === 'defense') { ctx.moveTo(X, Y - r); ctx.lineTo(X + r, Y); ctx.lineTo(X, Y + r); ctx.lineTo(X - r, Y); ctx.closePath(); }
+        else if (b.type === 'silo' || b.type === 'sam') ctx.rect(X - r * 0.85, Y - r * 0.85, r * 1.7, r * 1.7);
+        else ctx.arc(X, Y, r, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = b.type === 'silo' ? '#ff8a7a' : b.type === 'sam' ? '#9fe0ff' : '#fff';
+        ctx.fillText(BUILDINGS[b.type].icon, X, Y + 0.5);
+      }
+    }
+    for (const L of this.labels) {
+      const fs = Math.min(64, L.size * c.z);
+      if (fs < 8) continue;
+      const X = sx(L.x), Y = sy(L.y);
+      if (X < -200 || X > this.sw + 200 || Y < -60 || Y > this.sh + 60) continue;
+      const p = g.players[L.id]; if (!p.alive) continue;
+      const spr = this.labelSprite(L, p, fs), k = fs / spr.fs;
+      ctx.drawImage(spr.c, X - spr.w * k / 2, Y - spr.h * k / 2, spr.w * k, spr.h * k);
+    }
+  }
+}
+
+// Frontline Conquest - UI, input and main loop
+
+
+const $ = id => document.getElementById(id);
+const cv = $('cv');
+const R = new Renderer(cv);
+let G = null, pct = 25, mode = null, speed = 1, paused = false, acc = 0, last = 0, watching = false;
+let lastHud = 0, lastLb = 0;
+const attackedToast = new Map();
+let lastElimToast = 0;
+
+// ---------- start screen ----------
+const opts = { difficulty: 'standard', nations: 87, tribes: 400 };
+function seg(id, key, num) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    for (const x of $(id).children) x.classList.toggle('on', x === b);
+    opts[key] = num ? +b.dataset.v : b.dataset.v;
+  });
+}
+seg('segDiff', 'difficulty'); seg('segNations', 'nations', true); seg('segTribes', 'tribes', true);
+$('inName').value = localStorage.getItem('fc_name') || '';
+$('btnPlay').onclick = () => {
+  const name = ($('inName').value.trim() || 'Player').slice(0, 18);
+  localStorage.setItem('fc_name', name);
+  $('start').classList.add('hidden'); $('loading').classList.remove('hidden');
+  setTimeout(() => newGame(name), 30);
+};
+function newGame(name) {
+  getMap();
+  G = new Game({ ...opts, playerName: name });
+  R.setGame(G); R.fit();
+  $('loading').classList.add('hidden'); $('end').classList.add('hidden'); $('hud').classList.remove('hidden');
+  mode = null; setMode(null); paused = false; watching = false; speed = 1; $('btnSpeed').textContent = '⏩ 1x';
+  $('toasts').innerHTML = ''; attackedToast.clear(); lastElimToast = 0;
+  closePanel();
+  setBanner('👆 Tap unclaimed land to place your capital');
+  updateHud(true);
+}
+$('btnAgain').onclick = () => { $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('start').classList.remove('hidden'); G = null; };
+$('btnWatch').onclick = () => { $('end').classList.add('hidden'); watching = true; G.spectate = true; };
+
+// ---------- HUD ----------
+function setBanner(t) { $('banner').textContent = t || ''; }
+for (const b of document.querySelectorAll('.pct')) {
+  b.classList.toggle('on', +b.dataset.p === pct);
+  b.onclick = () => { pct = +b.dataset.p; for (const x of document.querySelectorAll('.pct')) x.classList.toggle('on', x === b); };
+}
+$('lbHead').onclick = () => $('lb').classList.toggle('collapsed');
+if (window.innerWidth < 560) $('lb').classList.add('collapsed');
+$('btnSpeed').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 3 : 1; $('btnSpeed').textContent = '⏩ ' + speed + 'x'; };
+$('btnHome').onclick = () => { if (!G) return; const H = G.human; const t = G.owner[H.capital] === H.id ? H.capital : H.border[0]; if (t !== undefined && t >= 0) { R.centerOn(t, Math.max(R.cam.z, 3)); R.ping(t); } };
+$('btnBuild').onclick = () => openBuild(-1);
+$('btnNuke').onclick = openNuke;
+$('btnMenu').onclick = openMenu;
+$('modeCancel').onclick = () => setMode(null);
+
+function rgb(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function updateHud(force) {
+  if (!G) return;
+  const H = G.human, cap = G.cap(H);
+  $('sTroops').textContent = fmt(H.troops); $('sCap').textContent = '/' + fmt(cap);
+  $('sGold').textContent = fmt(H.gold); $('sGoldRate').textContent = '+' + fmt(G.goldRate(H)) + '/s';
+  const lp = G.landPct(H); $('sLand').textContent = lp.toFixed(lp < 10 ? 2 : 1) + '%';
+  $('goalFill').style.width = Math.min(100, lp) + '%';
+  if (G.phase === 'play') {
+    const left = (G.protectUntil - G.tick) / TPS;
+    setBanner(left > 0 ? `🛡️ Spawn protection: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : '');
+  }
+  // attacks
+  const chips = G.attacks.filter(a => !a.done && a.att === H.id).slice(0, 6).map(a => {
+    const t = a.tgt ? G.players[a.tgt] : null;
+    return `<div class="chip" style="border-color:${t ? rgb(t.color) : '#8a8'}">⚔ ${t ? esc(t.name) : 'Wilderness'} · ${fmt(a.troops)}</div>`;
+  });
+  const ships = G.ships.filter(s => !s.done && s.owner === H.id).length;
+  if (ships) chips.push(`<div class="chip">⛵ ${ships} boat${ships > 1 ? 's' : ''} at sea</div>`);
+  $('attacks').innerHTML = chips.join('');
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function updateLb() {
+  const H = G.human, lb = G.leaderboard(8);
+  let html = lb.map((p, i) => `<li class="${p === H ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="sw" style="background:${rgb(p.color)}"></span><span class="nm">${esc(p.name)}</span><span class="pc">${G.landPct(p).toFixed(1)}%</span></li>`).join('');
+  if (!lb.includes(H) && H.alive && H.spawned) {
+    const rank = G.players.filter(p => p && p.alive && p.tiles > H.tiles).length + 1;
+    html += `<li class="me"><span class="rk">${rank}</span><span class="sw" style="background:${rgb(H.color)}"></span><span class="nm">${esc(H.name)}</span><span class="pc">${G.landPct(H).toFixed(1)}%</span></li>`;
+  }
+  const alive = G.players.filter(p => p && p.alive && p.type === 'nation').length;
+  html += `<li style="opacity:.6;justify-content:center">${alive} nations left</li>`;
+  $('lbList').innerHTML = html;
+}
+
+// ---------- toasts ----------
+function toast(html, cls = '', ms = 3200, buttons) {
+  const el = document.createElement('div'); el.className = 'toast ' + cls; el.innerHTML = html;
+  if (buttons) {
+    const row = document.createElement('div'); row.className = 'row';
+    for (const [label, fn, c] of buttons) { const b = document.createElement('button'); b.textContent = label; if (c) b.className = c; b.onclick = () => { fn(); el.remove(); }; row.appendChild(b); }
+    el.appendChild(row);
+  }
+  const box = $('toasts'); box.prepend(el);
+  while (box.children.length > 4) box.lastChild.remove();
+  setTimeout(() => el.remove(), ms);
+}
+function handleEvents() {
+  const H = G.human;
+  for (const e of G.events) {
+    const p = e.id ? G.players[e.id] : null;
+    const nm = p ? `<b style="color:${rgb(p.color)}">${esc(p.name)}</b>` : '';
+    switch (e.type) {
+      case 'attacked': {
+        const lt = attackedToast.get(e.id) || -1e9;
+        if (G.tick - lt > 200) { attackedToast.set(e.id, G.tick); toast(`⚔️ ${nm} is attacking you!`, 'bad'); }
+        break;
+      }
+      case 'boat': toast(`⛵ ${nm} launched a naval invasion at you!`, 'bad'); break;
+      case 'nuke': toast(`☢️ ${nm} launched a nuke at you!`, 'bad', 5000); break;
+      case 'allyRequest':
+        if (!p.alive) break;
+        toast(`🤝 ${nm} proposes an alliance (5 min).`, 'warn', 15000, [['Accept', () => { if (p.alive) { G.makeAlliance(H.id, p.id); toast(`🤝 Allied with ${nm}.`, 'good'); } }], ['Decline', () => { }, 'no']]);
+        break;
+      case 'allyExpired': toast(`Alliance with ${nm} has expired.`, 'warn'); break;
+      case 'allyBroken': toast(`💔 Alliance with ${nm} is over.`, 'bad'); break;
+      case 'eliminated': if (p && p.type === 'nation' && H.alive && G.tick - lastElimToast > 150) { lastElimToast = G.tick; toast(`☠️ ${nm} has been wiped out.`, '', 2500); } break;
+      case 'won': showEnd(true); break;
+      case 'lost': showEnd(false); break;
+    }
+  }
+  G.events.length = 0;
+}
+function showEnd(won) {
+  const H = G.human, mins = Math.floor(G.tick / TPS / 60);
+  $('endTitle').textContent = won ? '🏆 Victory!' : '💀 Defeated';
+  $('endText').innerHTML = won
+    ? `${esc(H.name)} controls ${G.landPct(H).toFixed(1)}% of the world after ${mins} minutes. The world is yours.`
+    : `Your nation fell after ${mins} minutes. Leader: <b>${esc(G.leaderboard(1)[0]?.name || '?')}</b>.`;
+  $('btnWatch').classList.toggle('hidden', won);
+  $('end').classList.remove('hidden');
+}
+
+// ---------- panels ----------
+function openPanel(title, html) { $('panelTitle').innerHTML = title; $('panelBody').innerHTML = html; $('panel').classList.remove('hidden'); }
+function closePanel() { $('panel').classList.add('hidden'); }
+$('panel').addEventListener('click', e => { if (e.target.closest('[data-close]')) closePanel(); });
+function setMode(m) {
+  mode = m;
+  $('modeBar').classList.toggle('hidden', !m);
+  if (m) $('modeTxt').textContent = m.kind === 'build' ? `Tap your land to place a ${BUILDINGS[m.type].name}` : `Tap a target for your ${NUKES[m.type].name}`;
+}
+function openBuild(tile) {
+  if (!G || G.phase !== 'play') return;
+  const H = G.human;
+  const cards = Object.entries(BUILDINGS).map(([k, b]) => {
+    const cost = G.buildCost(H, k);
+    let dis = H.gold < cost;
+    if (tile >= 0 && k === 'port' && !G.M.coastal[tile]) dis = true;
+    return `<button class="bcard" data-b="${k}" ${dis ? 'disabled' : ''}><b><span class="bico">${b.icon}</span>${b.name}</b><small>${b.desc}</small><span class="cost">💰 ${fmt(cost)}</span><small>You own: ${H.count[k]}</small></button>`;
+  }).join('');
+  openPanel(tile >= 0 ? '🏗️ Build here' : '🏗️ Build', `<div class="grid">${cards}</div><p style="font-size:12px;opacity:.7;margin:10px 0 0">Gold: 💰 ${fmt(H.gold)} · Tip: tap your own land to build right there.</p>`);
+  for (const b of $('panelBody').querySelectorAll('.bcard')) b.onclick = () => {
+    const type = b.dataset.b;
+    if (tile >= 0) { const err = G.build(H, type, tile); closePanel(); if (err) toast(err, 'bad'); else { toast(`Built a ${BUILDINGS[type].name}.`, 'good', 1800); R.ping(tile, '#ffd34d'); } }
+    else { closePanel(); setMode({ kind: 'build', type }); }
+  };
+}
+function openNuke() {
+  if (!G || G.phase !== 'play') return;
+  const H = G.human;
+  const rows = Object.entries(NUKES).map(([k, n]) => `<button class="bcard" data-n="${k}" ${H.gold < n.cost || !H.count.silo ? 'disabled' : ''}><b>☢️ ${n.name}</b><small>Blast radius ${n.radius} tiles. Kills troops & buildings, leaves fallout.</small><span class="cost">💰 ${fmt(n.cost)}</span></button>`).join('');
+  openPanel('☢️ Nukes', `${H.count.silo ? '' : '<p style="color:#ff9a8a;margin:0 0 8px">Build a Missile Silo first.</p>'}<div class="grid">${rows}</div><p style="font-size:12px;opacity:.7;margin:10px 0 0">Enemy SAM sites can shoot nukes down. Nuking an ally ends the alliance.</p>`);
+  for (const b of $('panelBody').querySelectorAll('.bcard')) b.onclick = () => { closePanel(); setMode({ kind: 'nuke', type: b.dataset.n }); };
+}
+function openInfo(t) {
+  if (!G || t < 0) return;
+  const H = G.human;
+  if (!G.M.land[t]) { openPanel('🌊 Ocean', '<div class="info"><p>Open water. With a Port, tap land across the sea to send a boat invasion.</p></div>'); return; }
+  const o = G.owner[t];
+  if (!o) { openPanel(G.fallout[t] ? '☢️ Fallout' : '🌲 Unclaimed land', `<div class="info"><p>${G.fallout[t] ? 'Radioactive wasteland. Slow and costly to reclaim.' : 'Nobody owns this yet. Tap it to expand.'}</p><p>Terrain: ${['Plains', 'Hills', 'Mountains'][G.M.terr[t]]}</p></div>`); return; }
+  const p = G.players[o];
+  const bl = G.buildingAt.get(t);
+  let html = `<div class="info"><p>${p.type === 'human' ? 'Your nation' : p.type === 'nation' ? 'AI nation' : 'Tribe'} · ${G.landPct(p).toFixed(2)}% of the world</p><p>🪖 Troops: <b>${fmt(p.troops)}</b> · 🗺️ Tiles: <b>${fmt(p.tiles)}</b></p>`;
+  if (p.type !== 'tribe') html += `<p>🏙️ ${p.count.city} · 🏭 ${p.count.factory} · ⚓ ${p.count.port} · 🛡️ ${p.count.defense} · 🚀 ${p.count.silo} · 📡 ${p.count.sam}</p>`;
+  if (bl) html += `<p>Here: <b>${BUILDINGS[bl.type].name}</b></p>`;
+  const btns = [];
+  if (o === H.id) btns.push(`<button data-a="build">🏗️ Build here</button>`);
+  else {
+    const ally = H.allies.get(o);
+    if (ally) { html += `<p style="color:#8f8">🤝 Allied · ${Math.ceil((ally - G.tick) / TPS / 60)} min left</p>`; btns.push(`<button data-a="break" class="danger">Break alliance</button>`); }
+    else { btns.push(`<button data-a="attack">⚔️ Attack with ${pct}% (${fmt(H.troops * pct / 100)})</button>`); if (p.type !== 'human') btns.push(`<button data-a="ally" class="alt">🤝 Ask for alliance</button>`); }
+  }
+  html += `<div class="btns">${btns.join('')}</div></div>`;
+  openPanel(`<span style="color:${rgb(p.color)}">■</span> ${esc(p.name)}`, html);
+  for (const b of $('panelBody').querySelectorAll('[data-a]')) b.onclick = () => {
+    const a = b.dataset.a; closePanel();
+    if (a === 'build') openBuild(t);
+    if (a === 'attack') doAttack(t);
+    if (a === 'break') { G.breakAlliance(H.id, o); }
+    if (a === 'ally') { const ok = G.requestAlliance(o); toast(ok ? `🤝 ${esc(p.name)} accepted your alliance!` : `${esc(p.name)} declined.`, ok ? 'good' : 'bad'); }
+  };
+}
+function openMenu() {
+  if (!G) return;
+  paused = true;
+  openPanel('⏸ Paused', `<div class="info"><p>Map: ${W}×${Math.round(N / W)} tiles · ${G.players.length - 1} rivals & tribes · ${DIFFS[G.diffKey].label}</p><p>Time: ${Math.floor(G.tick / TPS / 60)} min</p><div class="btns"><button data-m="resume">▶ Resume</button><button data-m="help" class="alt">❓ How to play</button><button data-m="quit" class="danger">Quit to title</button></div></div>`);
+  for (const b of $('panelBody').querySelectorAll('[data-m]')) b.onclick = () => {
+    const m = b.dataset.m;
+    if (m === 'resume') { closePanel(); paused = false; }
+    if (m === 'help') { $('panelBody').innerHTML = `<details open>${$('howto').innerHTML.replace(/<summary>.*?<\/summary>/, '')}</details><div class="info"><div class="btns"><button id="resumeBtn">▶ Resume</button></div></div>`; $('resumeBtn').onclick = () => { closePanel(); paused = false; }; }
+    if (m === 'quit') { closePanel(); paused = false; $('btnAgain').onclick(); }
+  };
+  $('panel').querySelector('[data-close]').addEventListener('click', () => { paused = false; }, { once: true });
+}
+
+// ---------- actions ----------
+function doAttack(t) {
+  const H = G.human, o = G.owner[t], troops = H.troops * pct / 100;
+  if (o && G.allied(H.id, o)) { toast('You are allied with them. Long-press to break the alliance.', 'warn'); return; }
+  // land route? our border touches the target on this landmass
+  const M = G.M, mass = M.mass[t], nb = new Int32Array(4);
+  let reach = false;
+  const B = H.border;
+  for (let i = 0; i < B.length && !reach; i++) { const n = G.nbrs(B[i], nb); for (let k = 0; k < n; k++) { const q = nb[k]; if (M.land[q] && G.owner[q] === o && M.mass[q] === mass) { reach = true; break; } } }
+  const name = o ? G.players[o].name : 'the wilderness';
+  if (reach && G.startAttack(H.id, o, troops)) { R.ping(t, '#ff6b5a'); return; }
+  const err = G.launchBoat(H.id, t, troops);
+  if (err) toast(reach ? 'No front line there.' : (H.count.port ? err : 'Not on your border. Build a ⚓ Port on your coast to invade by sea.'), 'bad');
+  else { toast(`⛵ Boat with ${fmt(troops)} troops sent toward ${esc(name)}.`, '', 2200); R.ping(t, '#5cf0ff'); }
+}
+function tap(sx, sy) {
+  if (!G) return;
+  const t = R.toTile(sx, sy);
+  if (G.phase === 'spawn') {
+    const err = G.placeHuman(t);
+    if (err) toast(err, 'bad', 2000);
+    else { R.centerOn(t, Math.max(R.cam.z, 3)); R.ping(t, '#ffd34d'); toast(`🛡️ Capital placed! AI nations can't attack you for ${G.diff.protect / 60} min. Pick a % and tap nearby land to expand.`, 'good', 6000); }
+    return;
+  }
+  if (G.phase !== 'play' || t < 0) return;
+  const H = G.human; if (!H.alive) return;
+  if (mode) {
+    if (mode.kind === 'build') { const err = G.build(H, mode.type, t); if (err) toast(err, 'bad', 2000); else { toast(`Built a ${BUILDINGS[mode.type].name}.`, 'good', 1800); R.ping(t, '#ffd34d'); setMode(null); } }
+    else { const err = G.launchNuke(H.id, mode.type, t); if (err) toast(err, 'bad', 2000); else { toast(`☢️ ${NUKES[mode.type].name} launched!`, 'warn', 2000); setMode(null); } }
+    return;
+  }
+  if (!G.M.land[t]) return;
+  if (G.owner[t] === H.id) { openBuild(t); return; }
+  doAttack(t);
+}
+
+// ---------- input: pan / pinch / tap / long-press ----------
+const ptrs = new Map();
+let st = null, pinch = null, lpTimer = 0;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) {
+    st = { x: e.clientX, y: e.clientY, cx: R.cam.x, cy: R.cam.y, moved: false, long: false };
+    clearTimeout(lpTimer);
+    if (e.pointerType !== 'mouse') lpTimer = setTimeout(() => { if (st && !st.moved && ptrs.size === 1) { st.long = true; if (navigator.vibrate) navigator.vibrate(15); openInfo(R.toTile(st.x, st.y)); } }, 500);
+  } else if (ptrs.size === 2) {
+    clearTimeout(lpTimer);
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: R.cam.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    pinch.wx = R.cam.x + pinch.mx / R.cam.z; pinch.wy = R.cam.y + pinch.my / R.cam.z;
+    if (st) st.moved = true;
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1 && st) {
+    const dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.moved && Math.hypot(dx, dy) > 9) st.moved = true;
+    if (st.moved) { R.cam.x = st.cx - dx / R.cam.z; R.cam.y = st.cy - dy / R.cam.z; R.clamp(); }
+  } else if (ptrs.size === 2 && pinch) {
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    R.cam.z = pinch.z * d / Math.max(1, pinch.d); R.clamp();
+    R.cam.x = pinch.wx - mx / R.cam.z; R.cam.y = pinch.wy - my / R.cam.z; R.clamp();
+  }
+});
+function up(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId); clearTimeout(lpTimer);
+  if (ptrs.size === 0) {
+    if (st && !st.moved && !st.long && e.type === 'pointerup' && e.button !== 2) tap(e.clientX, e.clientY);
+    st = null; pinch = null;
+  } else if (ptrs.size === 1) {
+    const [a] = [...ptrs.values()]; pinch = null;
+    st = { x: a.x, y: a.y, cx: R.cam.x, cy: R.cam.y, moved: true, long: false };
+  }
+}
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', e => { e.preventDefault(); R.zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+cv.addEventListener('contextmenu', e => { e.preventDefault(); if (G && G.phase === 'play') openInfo(R.toTile(e.clientX, e.clientY)); });
+window.addEventListener('resize', () => { R.resize(); R.clamp(); });
+window.addEventListener('keydown', e => {
+  if (!G || e.target.tagName === 'INPUT') return;
+  const map = { '1': 10, '2': 25, '3': 35, '4': 50, '5': 75 };
+  if (map[e.key]) { pct = map[e.key]; for (const x of document.querySelectorAll('.pct')) x.classList.toggle('on', +x.dataset.p === pct); }
+  if (e.key === 'Escape') { setMode(null); closePanel(); paused = false; }
+  if (e.key === 'b') openBuild(-1);
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// ---------- main loop ----------
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!G) return;
+  const dt = Math.min(250, now - (last || now)); last = now;
+  if (!paused && (G.phase === 'play' || watching)) {
+    acc += dt * speed;
+    let n = 0;
+    while (acc >= 1000 / TPS && n < 6) { G.step(); acc -= 1000 / TPS; n++; }
+    if (n === 6) acc = 0;
+    R.alpha = acc / (1000 / TPS);
+    handleEvents();
+  }
+  R.draw(now);
+  if (now - lastHud > 250) { lastHud = now; updateHud(); }
+  if (now - lastLb > 1000) { lastLb = now; updateLb(); }
+}
+requestAnimationFrame(frame);
+window.__fc = { get game() { return G; }, R };
+
+})();</script>
+</body>
+</html>

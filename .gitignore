@@ -1,0 +1,4 @@
+node_modules/
+tools/*.geojson
+tools/preview.*
+tools/package-lock.json
