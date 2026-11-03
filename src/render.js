@@ -1,5 +1,5 @@
 // Frontline Conquest - canvas renderer
-import { W, H, N, BUILDINGS, NUKES } from './sim.js';
+import { W, H, N, BUILDINGS, NUKES, GAS_TICKS } from './sim.js';
 
 const pack = (r, g, b) => (255 << 24 | b << 16 | g << 8 | r) >>> 0;
 const CS = 4, CW = Math.ceil(W / CS), CH = Math.ceil(H / CS);
@@ -203,17 +203,35 @@ export class Renderer {
       if (n.done) continue;
       const R = NUKES[n.type].radius;
       ctx.lineWidth = Math.max(0.6, 2 / c.z);
-      ctx.strokeStyle = 'rgba(255,60,40,0.8)'; ctx.setLineDash([4 / c.z, 3 / c.z]);
+      ctx.strokeStyle = NUKES[n.type].chem ? 'rgba(190,240,60,0.85)' : 'rgba(255,60,40,0.8)'; ctx.setLineDash([4 / c.z, 3 / c.z]);
       ctx.beginPath(); ctx.arc(n.tx + 0.5, n.ty + 0.5, R, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       const f = Math.min(1, (tk - n.t0) / (n.t1 - n.t0));
       const mx = (n.sx + n.tx) / 2, my = (n.sy + n.ty) / 2 - Math.hypot(n.tx - n.sx, n.ty - n.sy) * 0.35;
       const bx = (1 - f) * (1 - f) * n.sx + 2 * (1 - f) * f * mx + f * f * n.tx, by = (1 - f) * (1 - f) * n.sy + 2 * (1 - f) * f * my + f * f * n.ty;
       ctx.strokeStyle = 'rgba(255,200,120,0.35)'; ctx.beginPath(); ctx.moveTo(n.sx, n.sy); ctx.quadraticCurveTo(mx, my, n.tx, n.ty); ctx.stroke();
-      ctx.fillStyle = '#ffeb7a'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1.2, 5 / c.z), 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = NUKES[n.type].chem ? '#c8f040' : '#ffeb7a'; ctx.beginPath(); ctx.arc(bx, by, Math.max(1.2, 5 / c.z), 0, Math.PI * 2); ctx.fill();
+    }
+    // chem gas clouds: translucent drifting yellow-green puffs that fade out
+    for (const cl of g.clouds) {
+      const age = (tk - cl.t0) / GAS_TICKS; if (age < 0 || age > 1) continue;
+      const fade = Math.min(1, age * 12) * (1 - age) ** 0.7;
+      const R = cl.r * (0.85 + age * 0.3), x0 = cl.x + cl.vx * (this.alpha || 0), y0 = cl.y + cl.vy * (this.alpha || 0);
+      if (!inView(x0, y0, R * 1.6)) continue;
+      const tt = now / 1000;
+      for (let k = 0; k < 7; k++) {
+        const ang = cl.seed + k * 0.9 + tt * (0.15 + k * 0.03) * (k % 2 ? 1 : -1);
+        const off = k === 0 ? 0 : R * (0.35 + 0.15 * Math.sin(tt * 0.7 + k));
+        const px = x0 + Math.cos(ang) * off, py = y0 + Math.sin(ang) * off, pr = R * (k === 0 ? 0.85 : 0.55 + 0.1 * Math.sin(tt + k * 2));
+        const gr = ctx.createRadialGradient(px, py, 0, px, py, pr);
+        gr.addColorStop(0, `rgba(210,245,70,${0.6 * fade})`);
+        gr.addColorStop(0.6, `rgba(175,225,50,${0.4 * fade})`);
+        gr.addColorStop(1, 'rgba(150,200,40,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
+      }
     }
     for (const e of g.effects) {
       const f = (tk - e.t0) / e.dur; if (f < 0 || f > 1) continue;
-      ctx.fillStyle = e.kind === 'blast' ? `rgba(255,${(180 - f * 150) | 0},40,${0.75 * (1 - f)})` : `rgba(255,255,255,${0.9 * (1 - f)})`;
+      ctx.fillStyle = e.kind === 'blast' ? `rgba(255,${(180 - f * 150) | 0},40,${0.75 * (1 - f)})` : e.kind === 'puff' ? `rgba(220,255,90,${0.6 * (1 - f)})` : `rgba(255,255,255,${0.9 * (1 - f)})`;
       ctx.beginPath(); ctx.arc(e.x + 0.5, e.y + 0.5, e.r * (0.4 + f * 0.8), 0, Math.PI * 2); ctx.fill();
     }
     // ships

@@ -21,8 +21,9 @@ It plays on phones (touch) and desktops. Everything runs in the browser: no serv
    - **Missile Silo**: unlocks nukes.
    - **SAM Site**: can shoot down incoming nukes.
 5. **Nukes** (Atom or Hydrogen) destroy troops and buildings in a radius and leave fallout. Fallout tiles don't count toward the goal, and anyone can reclaim them.
-6. Long-press (or right-click) any territory for its info. From there you can ask for an alliance or break one. AI nations will sometimes offer you an alliance.
-7. Own **80% of the world** to win. You lose if all your land is taken.
+6. **Chem Strike** costs less than an Atom Bomb and also launches from a Missile Silo. It releases a drifting yellow-green gas cloud. For about 25 seconds the cloud drains troops from whoever owns the land underneath and stops their troop growth there. Buildings survive, and SAM sites can intercept it.
+7. Long-press (or right-click) any territory for its info. From there you can ask for an alliance or break one. AI nations will sometimes offer you an alliance.
+8. Own **80% of the world** to win. You lose if all your land is taken.
 
 Controls: drag to pan, pinch or scroll to zoom. On desktop, keys 1–5 set the troop % and Esc cancels.
 

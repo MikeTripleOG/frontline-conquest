@@ -9,13 +9,15 @@ export const BUILDINGS = {
   factory: { name: 'Factory',      cost: 4000,  icon: 'F', desc: '+40 gold / sec' },
   port:    { name: 'Port',         cost: 3000,  icon: 'P', desc: 'Coast only. Send boat invasions across water' },
   defense: { name: 'Defense Post', cost: 2000,  icon: 'D', desc: 'Enemies pay 3x to take land within 12 tiles' },
-  silo:    { name: 'Missile Silo', cost: 12000, icon: 'M', desc: 'Lets you launch nukes' },
+  silo:    { name: 'Missile Silo', cost: 12000, icon: 'M', desc: 'Lets you launch nukes & chem strikes' },
   sam:     { name: 'SAM Site',     cost: 8000,  icon: 'S', desc: '75% chance to shoot down nukes within 70 tiles' },
 };
 export const NUKES = {
   atom:     { name: 'Atom Bomb',     cost: 8000,  radius: 10 },
   hydrogen: { name: 'Hydrogen Bomb', cost: 30000, radius: 24 },
+  chem:     { name: 'Chem Strike',   cost: 5000,  radius: 14, chem: true },
 };
+export const GAS_TICKS = 250; // gas cloud lasts ~25 s
 export const DIFFS = {
   relaxed:  { label: 'Relaxed',  regen: 0.85, protect: 180, aggr: 0.15, nukes: false, nukeTick: 1e9,  humanBias: 0.6, think: 14 },
   standard: { label: 'Standard', regen: 1.0,  protect: 120, aggr: 0.3,  nukes: true,  nukeTick: 4800, humanBias: 1.0, think: 10 },
@@ -125,9 +127,9 @@ export class Game {
     this.visit = new Uint32Array(N); this.stamp = 1; this.prev = new Int32Array(N); this.queue = new Int32Array(N);
     this.nbA = new Int32Array(4); this.nbB = new Int32Array(4); this.nbC = new Int32Array(4);
     this.players = [null]; this.buildings = []; this.buildingAt = new Map();
-    this.attacks = []; this.ships = []; this.nukes = []; this.effects = []; this.events = [];
+    this.attacks = []; this.ships = []; this.nukes = []; this.clouds = []; this.effects = []; this.events = [];
     this.tick = 0; this.phase = 'spawn'; this.protectUntil = 0; this.nextId = 1;
-    this.stats = { nukes: 0, intercepts: 0, boats: 0 };
+    this.stats = { nukes: 0, chem: 0, intercepts: 0, boats: 0, gasKilled: 0 };
     this.makePlayers(opts.nations ?? 87, opts.tribes ?? 400, opts.playerName || 'You');
   }
 
@@ -137,7 +139,7 @@ export class Game {
       id: this.players.length, type, name, color, troops: type === 'human' ? 1200 : type === 'nation' ? 1200 : 500,
       gold: type === 'human' ? 1500 : 1000, tiles: 0, border: [], alive: true, spawned: false, capital: -1,
       count: { city: 0, factory: 0, port: 0, defense: 0, silo: 0, sam: 0 }, blds: [],
-      allies: new Map(), grudge: new Map(), lastAllyAsk: -1e9,
+      allies: new Map(), grudge: new Map(), lastAllyAsk: -1e9, gasFrac: 0,
       ai: { threshold: 0.35 + this.rng() * 0.35, pct: 0.2 + this.rng() * 0.25, every: type === 'tribe' ? 25 + ((this.rng() * 15) | 0) : this.diff.think + ((this.rng() * 5) | 0) },
     };
     this.players.push(p); return p;
@@ -479,8 +481,8 @@ export class Game {
     // nuking breaks alliances with the victim
     if (victim && victim !== pid) { this.breakAlliance(pid, victim); this.players[victim].grudge.set(pid, this.tick + 3000); }
     this.nukes.push({ owner: pid, type, sx: silo.x, sy: silo.y, tx, ty, t0: this.tick, t1: this.tick + dur, interceptAt, target });
-    this.stats.nukes++;
-    if (victim === this.human.id && pid !== victim) this.events.push({ type: 'nuke', id: pid });
+    if (spec.chem) this.stats.chem++; else this.stats.nukes++;
+    if (victim === this.human.id && pid !== victim) this.events.push({ type: spec.chem ? 'chem' : 'nuke', id: pid });
     return null;
   }
   processNukes() {
@@ -499,6 +501,13 @@ export class Game {
   }
   detonate(n) {
     const R = NUKES[n.type].radius, M = this.M;
+    if (NUKES[n.type].chem) {
+      // gas cloud: drifts with a random wind, drains troops and halts regen underneath; buildings survive
+      const a = this.rng() * Math.PI * 2, sp = 0.02 + this.rng() * 0.03;
+      this.clouds.push({ owner: n.owner, x: n.tx + 0.5, y: n.ty + 0.5, r: R, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t0: this.tick, t1: this.tick + GAS_TICKS, seed: this.rng() * 1000 });
+      this.effects.push({ kind: 'puff', x: n.tx, y: n.ty, r: R * 0.6, t0: this.tick, dur: 12 });
+      return;
+    }
     this.effects.push({ kind: 'blast', x: n.tx, y: n.ty, r: R, t0: this.tick, dur: 25 });
     const hit = new Set();
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
@@ -514,6 +523,31 @@ export class Game {
       this.fallout[t] = FALLOUT; this.markDirty(t);
     }
     for (const o of hit) if (o !== n.owner) this.players[o].grudge.set(n.owner, this.tick + 3000);
+  }
+  processClouds() {
+    for (let i = 1; i < this.players.length; i++) this.players[i].gasFrac = 0;
+    if (!this.clouds.length) return;
+    const own = this.owner, land = this.M.land, cnt = new Map();
+    for (const c of this.clouds) {
+      c.x += c.vx * 5; c.y += c.vy * 5;
+      const age = (this.tick - c.t0) / GAS_TICKS, strength = 1 - age * 0.6, R = c.r * (0.85 + age * 0.3);
+      cnt.clear();
+      const cx = Math.round(c.x), cy = Math.round(c.y), Ri = Math.ceil(R);
+      for (let dy = -Ri; dy <= Ri; dy++) for (let dx = -Ri; dx <= Ri; dx++) {
+        if (dx * dx + dy * dy > R * R) continue;
+        const x = cx + dx, y = cy + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const t = y * W + x; if (!land[t]) continue;
+        const o = own[t]; if (o) cnt.set(o, (cnt.get(o) || 0) + 1);
+      }
+      for (const [o, k] of cnt) {
+        const p = this.players[o]; if (!p.alive) continue;
+        const frac = Math.min(1, k / Math.max(1, p.tiles));
+        p.gasFrac = Math.min(1, p.gasFrac + frac);
+        const loss = Math.min(p.troops, (p.troops * frac * 0.045 + k * 0.5) * strength); p.troops -= loss; this.stats.gasKilled += loss;
+        if (o !== c.owner && !p.grudge.has(c.owner)) p.grudge.set(c.owner, this.tick + 1500);
+      }
+    }
+    this.clouds = this.clouds.filter(c => this.tick < c.t1);
   }
   processFallout() {
     const f = this.fallout; let w = 0; const L = this.falloutList;
@@ -567,7 +601,7 @@ export class Game {
     const r = this.rng, d = this.diff, cap = this.cap(p);
     if (p.type === 'nation') {
       if (r() < 0.35) this.aiBuild(p);
-      if (d.nukes && this.tick > d.nukeTick && p.count.silo && r() < 0.08) this.aiNuke(p);
+      if (d.nukes && this.tick > d.nukeTick && p.count.silo && this.tick - (p.lastStrike || 0) > 900 && r() < 0.08) this.aiNuke(p);
     }
     if (p.troops < cap * p.ai.threshold) return;
     const info = this.scanNeighbors(p);
@@ -652,11 +686,11 @@ export class Game {
       if (s > bs) { bs = s; target = q; }
     }
     if (!target || target.tiles < 300) return;
-    const type = p.gold > NUKES.hydrogen.cost * 1.3 && r() < 0.4 ? 'hydrogen' : 'atom';
+    const type = p.gold > NUKES.hydrogen.cost * 1.3 && r() < 0.4 ? 'hydrogen' : (r() < 0.3 || p.gold < NUKES.atom.cost * 1.2) ? 'chem' : 'atom';
     if (p.gold < NUKES[type].cost * 1.2) return;
     const city = target.blds.find(b => b.type === 'city' || b.type === 'silo');
-    const t = city ? city.tile : target.border[(r() * target.border.length) | 0];
-    if (t !== undefined) this.launchNuke(p.id, type, t);
+    const t = city && type !== 'chem' ? city.tile : target.border[(r() * target.border.length) | 0];
+    if (t !== undefined && !this.launchNuke(p.id, type, t)) p.lastStrike = this.tick;
   }
 
   // ---- main tick ----
@@ -668,7 +702,7 @@ export class Game {
       const p = this.players[i]; if (!p.alive || !p.spawned) continue;
       const cap = this.cap(p);
       const mult = p.type === 'human' ? 1 : d.regen;
-      if (p.troops < cap) p.troops += (3 + Math.pow(p.troops, 0.7) / 10) * (1 - p.troops / cap) * mult;
+      if (p.troops < cap) p.troops += (3 + Math.pow(p.troops, 0.7) / 10) * (1 - p.troops / cap) * mult * (1 - p.gasFrac);
       else p.troops -= (p.troops - cap) * 0.01;
       p.gold += this.goldRate(p) / TPS * (p.type === 'human' ? 1 : d.regen);
     }
@@ -676,6 +710,7 @@ export class Game {
     this.processShips();
     this.processNukes();
     if (this.tick % 10 === 0) this.processFallout();
+    if (this.tick % 5 === 0) this.processClouds();
     for (let i = 2; i < this.players.length; i++) {
       const p = this.players[i];
       if (p.alive && (this.tick + i) % p.ai.every === 0) this.ai(p);

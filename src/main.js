@@ -115,6 +115,7 @@ function handleEvents() {
       }
       case 'boat': toast(`⛵ ${nm} launched a naval invasion at you!`, 'bad'); break;
       case 'nuke': toast(`☢️ ${nm} launched a nuke at you!`, 'bad', 5000); break;
+      case 'chem': toast(`☣️ ${nm} launched a Chem Strike at you!`, 'bad', 5000); break;
       case 'allyRequest':
         if (!p.alive) break;
         toast(`🤝 ${nm} proposes an alliance (5 min).`, 'warn', 15000, [['Accept', () => { if (p.alive) { G.makeAlliance(H.id, p.id); toast(`🤝 Allied with ${nm}.`, 'good'); } }], ['Decline', () => { }, 'no']]);
@@ -166,8 +167,8 @@ function openBuild(tile) {
 function openNuke() {
   if (!G || G.phase !== 'play') return;
   const H = G.human;
-  const rows = Object.entries(NUKES).map(([k, n]) => `<button class="bcard" data-n="${k}" ${H.gold < n.cost || !H.count.silo ? 'disabled' : ''}><b>☢️ ${n.name}</b><small>Blast radius ${n.radius} tiles. Kills troops & buildings, leaves fallout.</small><span class="cost">💰 ${fmt(n.cost)}</span></button>`).join('');
-  openPanel('☢️ Nukes', `${H.count.silo ? '' : '<p style="color:#ff9a8a;margin:0 0 8px">Build a Missile Silo first.</p>'}<div class="grid">${rows}</div><p style="font-size:12px;opacity:.7;margin:10px 0 0">Enemy SAM sites can shoot nukes down. Nuking an ally ends the alliance.</p>`);
+  const rows = Object.entries(NUKES).map(([k, n]) => `<button class="bcard" data-n="${k}" ${H.gold < n.cost || !H.count.silo ? 'disabled' : ''}><b>${n.chem ? '☣️' : '☢️'} ${n.name}</b><small>${n.chem ? `Gas cloud, radius ${n.radius} tiles. Drains troops and stops troop growth there for ~25 s. Buildings survive.` : `Blast radius ${n.radius} tiles. Kills troops & buildings, leaves fallout.`}</small><span class="cost">💰 ${fmt(n.cost)}</span></button>`).join('');
+  openPanel('☢️ Missile strikes', `${H.count.silo ? '' : '<p style="color:#ff9a8a;margin:0 0 8px">Build a Missile Silo first.</p>'}<div class="grid">${rows}</div><p style="font-size:12px;opacity:.7;margin:10px 0 0">Enemy SAM sites can shoot down nukes and chem strikes. Striking an ally ends the alliance.</p>`);
   for (const b of $('panelBody').querySelectorAll('.bcard')) b.onclick = () => { closePanel(); setMode({ kind: 'nuke', type: b.dataset.n }); };
 }
 function openInfo(t) {
@@ -239,7 +240,7 @@ function tap(sx, sy) {
   const H = G.human; if (!H.alive) return;
   if (mode) {
     if (mode.kind === 'build') { const err = G.build(H, mode.type, t); if (err) toast(err, 'bad', 2000); else { toast(`Built a ${BUILDINGS[mode.type].name}.`, 'good', 1800); R.ping(t, '#ffd34d'); setMode(null); } }
-    else { const err = G.launchNuke(H.id, mode.type, t); if (err) toast(err, 'bad', 2000); else { toast(`☢️ ${NUKES[mode.type].name} launched!`, 'warn', 2000); setMode(null); } }
+    else { const err = G.launchNuke(H.id, mode.type, t); if (err) toast(err, 'bad', 2000); else { toast(`${NUKES[mode.type].chem ? '☣️' : '☢️'} ${NUKES[mode.type].name} launched!`, 'warn', 2000); setMode(null); } }
     return;
   }
   if (!G.M.land[t]) return;
